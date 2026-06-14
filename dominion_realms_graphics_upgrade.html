@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dominion Realms">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#14111c">
+<title>Dominion Realms — Vertical Slice</title>
+<style>
+  :root{
+    --gold:#E8B23A; --gold-soft:#caa24e; --sun:#ffd66e; --gold-lite:#ffe9b0;
+    --bronze:#b8863a; --bronze-dk:#6e4f16; --bronze-lt:#d8a85a;
+    --obsidian:#14111c; --ink:#0c0a12; --panel:#1b1726; --panel-2:#241f33; --panel-3:#2c2640;
+    --line:#3a3350; --line-2:#4a4068; --parch:#e9e0c8; --parch-dim:#b9b09a;
+    --enemy:#8a6bff; --bad:#d8554f; --good:#5fc77a;
+    --shadow:0 8px 28px rgba(0,0,0,.45);
+    --grad-gold:linear-gradient(180deg,#ffe9b0,#e8b23a 48%,#b07d1c);
+    --frame:linear-gradient(180deg,rgba(184,134,58,.85),rgba(110,79,22,.85));
+    --emboss:inset 0 1px 0 rgba(255,236,176,.18), inset 0 -2px 4px rgba(0,0,0,.32);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;background:var(--obsidian);overflow:hidden;
+    font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;color:var(--parch);
+    user-select:none;-webkit-user-select:none;touch-action:none;}
+  #game{position:fixed;inset:0;display:block;background:#0c0a12;}
+  /* ambient vignette for depth (non-interactive) */
+  body::after{content:"";position:fixed;inset:0;z-index:4;pointer-events:none;
+    background:radial-gradient(125% 95% at 50% 42%,transparent 64%,rgba(6,4,10,.34) 100%);}
+  .hud{position:fixed;z-index:5;pointer-events:none;}
+  .hud *{pointer-events:auto;}
+
+  /* Top resource bar */
+  #topbar{top:0;left:0;right:0;display:flex;gap:6px;align-items:center;
+    padding:7px 9px 8px;background:linear-gradient(180deg,rgba(16,13,22,.97),rgba(18,15,24,.82) 72%,transparent);
+    border-bottom:1px solid rgba(184,134,58,.32);flex-wrap:wrap;}
+  .res{display:flex;align-items:center;gap:6px;background:linear-gradient(180deg,#241f33,#191525);
+    border:1px solid var(--line);border-radius:9px;padding:4px 10px 4px 7px;min-width:0;
+    box-shadow:var(--emboss);}
+  .res .ic{position:relative;width:19px;height:19px;border-radius:6px;flex:0 0 auto;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,#332b42,#171321);border:1px solid rgba(184,134,58,.42);
+    box-shadow:inset 0 1px 1px rgba(255,255,255,.18), 0 2px 5px rgba(0,0,0,.34);}
+  .res .ic::before{position:absolute;left:50%;top:50%;transform:translate(-50%,-52%);
+    font-size:14px;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,.75);}
+  .res b{font-variant-numeric:tabular-nums;font-size:14px;letter-spacing:.3px;text-shadow:0 1px 1px rgba(0,0,0,.5);}
+  .res small{color:var(--parch-dim);font-size:11px;}
+  .ic.food{background:linear-gradient(180deg,#513329,#21141b);}
+  .ic.food::before{content:"🍖";}
+  .ic.wood{background:linear-gradient(180deg,#4a3525,#211816);}
+  .ic.wood::before{content:"🪵";}
+  .ic.gold{background:linear-gradient(180deg,#684b16,#2b1b08);}
+  .ic.gold::before{content:"🪙";}
+  .ic.favor{background:linear-gradient(180deg,#24475a,#111d2d);}
+  .ic.favor::before{content:"✦";color:#bff0ff;text-shadow:0 0 6px rgba(127,208,255,.8),0 1px 2px #000;}
+  .ic.stone{background:linear-gradient(180deg,#474153,#211d2a);}
+  .ic.stone::before{content:"🪨";}
+  .ic.pop{background:linear-gradient(180deg,#4b463a,#231f1a);}
+  .ic.pop::before{content:"👥";font-size:13px;}
+  #eratag{margin-left:auto;display:flex;align-items:center;gap:8px;}
+  #eraname{font-family:Georgia,"Times New Roman",serif;letter-spacing:.6px;font-style:italic;
+    color:var(--sun);font-size:13px;text-shadow:0 1px 2px #000;}
+  .btn{font-family:inherit;cursor:pointer;border-radius:9px;border:1px solid var(--bronze-dk);
+    background:linear-gradient(180deg,var(--panel-3),#1d1830);color:var(--parch);padding:7px 11px;font-size:13px;
+    box-shadow:var(--emboss);transition:filter .12s, transform .05s, box-shadow .12s;}
+  .btn:hover{filter:brightness(1.12);box-shadow:var(--emboss),0 0 8px rgba(232,178,58,.25);}
+  .btn:active{transform:translateY(1px);}
+  .btn.gold{background:var(--grad-gold);color:#2a1d04;border-color:var(--bronze-dk);font-weight:bold;
+    text-shadow:0 1px 0 rgba(255,255,255,.3);}
+  .btn.ghost{background:transparent;box-shadow:none;}
+  .btn:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.4);}
+  .btn.sm{padding:5px 9px;font-size:12px;}
+
+  /* Command panel */
+  #cmd{bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(14,11,20,.98),rgba(18,15,24,.86) 60%,transparent);
+    padding:9px 10px 11px;border-top:1px solid rgba(184,134,58,.34);}
+  #cmd-head{display:flex;align-items:baseline;gap:8px;margin-bottom:7px;min-height:18px;}
+  #cmd-title{font-family:Georgia,serif;font-size:16px;font-weight:bold;color:var(--sun);
+    letter-spacing:.3px;text-shadow:0 1px 3px rgba(0,0,0,.6);}
+  #cmd-sub{font-size:12px;color:var(--parch-dim);}
+  #cmd-grid{display:flex;gap:7px;flex-wrap:wrap;}
+  .card{position:relative;width:84px;min-height:64px;border:1px solid var(--bronze-dk);
+    border-radius:11px;background:linear-gradient(180deg,#2e2842,#1b1628);padding:7px 7px 6px;cursor:pointer;
+    display:flex;flex-direction:column;gap:2px;box-shadow:var(--emboss);overflow:hidden;
+    transition:transform .07s, box-shadow .12s, filter .12s;}
+  .card::before{content:"";position:absolute;inset:0 0 auto 0;height:34%;
+    background:linear-gradient(180deg,rgba(255,236,176,.10),transparent);pointer-events:none;}
+  .card:hover{filter:brightness(1.08);transform:translateY(-1px);
+    box-shadow:var(--emboss),0 4px 12px rgba(0,0,0,.4),0 0 9px rgba(232,178,58,.3);border-color:var(--bronze);}
+  .card:active{transform:translateY(0);}
+  .card .name{font-size:12px;font-weight:bold;line-height:1.08;color:var(--parch);}
+  .card .cost{font-size:10.5px;color:var(--gold-soft);font-variant-numeric:tabular-nums;line-height:1.3;}
+  .card.locked{opacity:.42;cursor:not-allowed;filter:grayscale(.5);}
+  .card.locked::after{content:"🔒";position:absolute;top:4px;right:5px;font-size:11px;opacity:.8;}
+  .card.cant{border-color:rgba(216,85,79,.7);box-shadow:var(--emboss),0 0 8px rgba(216,85,79,.35);}
+  .card .q{position:absolute;top:3px;right:6px;font-size:11px;color:var(--sun);font-weight:bold;
+    text-shadow:0 1px 2px #000;}
+  .card .bar{position:absolute;left:0;bottom:0;height:3px;background:var(--grad-gold);border-radius:0 0 0 11px;width:0;
+    box-shadow:0 0 6px rgba(232,178,58,.6);}
+  .swatch{width:12px;height:12px;border-radius:50%;display:inline-block;vertical-align:-1px;margin-right:4px;
+    box-shadow:inset 0 1px 1px rgba(255,255,255,.4);}
+  #power-wrap{position:fixed;right:10px;bottom:96px;z-index:6;}
+  #powerbtn{width:66px;height:66px;border-radius:50%;border:2px solid var(--bronze-dk);
+    background:radial-gradient(circle at 38% 30%,#fff3cf,#ffcf5e 42%,#e8a31d 68%,#9a6a0f);
+    color:#3a2a05;font-weight:bold;font-size:12px;cursor:pointer;position:relative;
+    box-shadow:var(--shadow),inset 0 2px 4px rgba(255,255,255,.5),inset 0 -3px 6px rgba(120,80,10,.5);
+    display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.05;padding:6px;}
+  #powerbtn::before{content:"";position:absolute;inset:-5px;border-radius:50%;
+    border:1px solid rgba(255,214,110,.35);}
+  #powerbtn:disabled{filter:grayscale(.7) brightness(.7);cursor:not-allowed;}
+  #powerbtn.armed{box-shadow:0 0 0 4px rgba(255,214,110,.45),var(--shadow);animation:pulse 1s infinite;}
+  @keyframes pulse{50%{box-shadow:0 0 0 10px rgba(255,214,110,.12),var(--shadow);}}
+
+  /* Minimap */
+  #mm-wrap{position:fixed;right:10px;top:54px;z-index:6;border:2px solid var(--bronze-dk);
+    border-radius:10px;overflow:hidden;background:#0c0a12;
+    box-shadow:var(--shadow),inset 0 0 0 1px rgba(184,134,58,.25);}
+  #mm-wrap::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:8px;
+    box-shadow:inset 0 0 16px rgba(0,0,0,.55);}
+  #minimap{display:block;}
+  /* misc controls */
+  #ctrls{position:fixed;left:10px;bottom:96px;z-index:6;display:flex;flex-direction:column;gap:6px;}
+  #toast{position:fixed;top:48px;left:50%;transform:translateX(-50%);z-index:8;
+    background:linear-gradient(180deg,rgba(28,22,40,.97),rgba(18,14,26,.97));
+    border:1px solid var(--bronze-dk);border-radius:10px;box-shadow:var(--shadow),var(--emboss);
+    padding:8px 14px;font-size:13px;color:var(--sun);opacity:0;transition:opacity .25s, transform .25s;
+    transform:translateX(-50%) translateY(-6px);pointer-events:none;text-shadow:0 1px 2px #000;}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* Overlays (start / end) */
+  .overlay{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(1000px 640px at 50% 20%,rgba(80,58,14,.42),rgba(6,4,10,.97));padding:18px;}
+  .panel{position:relative;max-width:520px;width:100%;
+    background:linear-gradient(180deg,#241d33,#15111e);
+    border:1px solid var(--bronze-dk);border-radius:16px;padding:24px 24px 20px;
+    box-shadow:var(--shadow),inset 0 1px 0 rgba(255,236,176,.12);}
+  .panel::before{content:"";position:absolute;inset:0;border-radius:16px;pointer-events:none;
+    background:radial-gradient(420px 220px at 50% -10%,rgba(255,214,110,.16),transparent 70%);}
+  .panel h1{position:relative;font-family:Georgia,serif;margin:0 0 2px;font-size:32px;letter-spacing:1.5px;
+    background:var(--grad-gold);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 2px 6px rgba(0,0,0,.5));}
+  .panel .tag{color:var(--parch-dim);font-size:13px;margin-bottom:14px;letter-spacing:.5px;}
+  .panel p{font-size:13.5px;line-height:1.55;color:var(--parch);}
+  .panel h1.lose{background:linear-gradient(180deg,#ffb3ae,#d8554f);-webkit-background-clip:text;background-clip:text;}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .seg{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px;}
+  .seg .btn[aria-pressed="true"]{outline:2px solid var(--gold);background:var(--panel-3);
+    box-shadow:var(--emboss),0 0 10px rgba(232,178,58,.3);}
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:5px 14px;font-size:12px;color:var(--parch-dim);margin:12px 0 4px;}
+  .hide{display:none!important;}
+  kbd{background:#2c2640;border:1px solid #463d5e;border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:11px;}
+  /* control groups */
+  #groupbar{position:fixed;left:50%;transform:translateX(-50%);bottom:118px;z-index:6;display:flex;gap:5px;}
+  #groupbar .grp{min-width:30px;height:27px;padding:0 9px;border:1px solid var(--bronze-dk);border-radius:8px;
+    background:linear-gradient(180deg,#2e2842,#1b1628);color:var(--parch);font-size:12px;font-weight:bold;cursor:pointer;
+    display:flex;align-items:center;gap:4px;box-shadow:var(--shadow),var(--emboss);}
+  #groupbar .grp small{color:var(--sun);font-weight:normal;}
+  #groupbar .grp:hover{filter:brightness(1.15);border-color:var(--bronze);box-shadow:var(--shadow),0 0 8px rgba(232,178,58,.3);}
+  #groupbar .grp:active{transform:translateY(1px);}
+  /* under-attack flash */
+  #hurtflash{position:fixed;inset:0;z-index:7;pointer-events:none;opacity:0;}
+  #hurtflash.go{animation:hurtpulse .85s ease-out;}
+  @keyframes hurtpulse{0%{opacity:0;box-shadow:inset 0 0 0 0 rgba(216,60,60,0);}
+    18%{opacity:1;box-shadow:inset 0 0 90px 22px rgba(216,60,60,.55);}
+    100%{opacity:0;box-shadow:inset 0 0 90px 22px rgba(216,60,60,0);}}
+  /* temple hold bar */
+  #templebar{position:fixed;left:50%;transform:translateX(-50%);bottom:152px;z-index:6;
+    background:linear-gradient(180deg,rgba(28,22,40,.96),rgba(16,13,24,.96));
+    border:1px solid var(--bronze-dk);border-radius:10px;padding:6px 12px;
+    font-size:12px;color:#bfe6ff;display:flex;align-items:center;gap:9px;box-shadow:var(--shadow),var(--emboss);}
+  #templebar .track{width:120px;height:7px;background:#0f0c18;border-radius:4px;overflow:hidden;
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.6);}
+  #templebar .fill{height:100%;width:0;background:linear-gradient(90deg,#7fd0ff,#cfeeff);transition:width .2s linear;
+    box-shadow:0 0 8px rgba(127,208,255,.6);}
+  #templebar b{font-variant-numeric:tabular-nums;color:#dff2ff;text-shadow:0 1px 2px #000;}
+  /* stance buttons */
+  .stancebtn{flex:1;padding:7px 4px;font-size:11.5px;border-radius:9px;border:1px solid var(--bronze-dk);
+    background:linear-gradient(180deg,#2a2440,#1a1528);color:var(--parch);cursor:pointer;text-align:center;
+    white-space:nowrap;box-shadow:var(--emboss);transition:filter .12s, box-shadow .12s;}
+  .stancebtn:hover{filter:brightness(1.12);box-shadow:var(--emboss),0 0 7px rgba(232,178,58,.25);}
+  .stancebtn.on{outline:2px solid var(--gold);background:var(--panel-3);color:var(--sun);
+    box-shadow:var(--emboss),0 0 9px rgba(232,178,58,.35);}
+  @media (max-width:560px){ .res small{display:none;} .res{padding:4px 8px 4px 6px;} .card{width:76px;} #groupbar .grp{min-width:26px;padding:0 7px;} }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- HUD -->
+<div class="hud" id="topbar">
+  <div class="res"><span class="ic food"></span><b id="r-food">0</b></div>
+  <div class="res"><span class="ic wood"></span><b id="r-wood">0</b></div>
+  <div class="res"><span class="ic gold"></span><b id="r-gold">0</b></div>
+  <div class="res"><span class="ic stone"></span><b id="r-stone">0</b></div>
+  <div class="res"><span class="ic favor"></span><b id="r-favor">0</b></div>
+  <div class="res"><span class="ic pop"></span><b id="r-pop">0/0</b></div>
+  <div id="eratag"><span id="eraname">Era del Alba</span></div>
+</div>
+
+<div id="mm-wrap"><canvas id="minimap" width="150" height="150"></canvas></div>
+
+<div id="ctrls" class="hud">
+  <button class="btn sm" id="btn-army" title="Seleccionar todo el ejército">⚔ Ejército</button>
+  <button class="btn sm" id="btn-idle" title="Próximo aldeano libre">⛏ Libre</button>
+  <button class="btn sm" id="btn-save">Guardar</button>
+  <button class="btn sm" id="btn-load" disabled>Cargar</button>
+  <button class="btn sm" id="btn-mute" title="Silenciar sonido">🔊</button>
+</div>
+
+<div id="power-wrap" class="hud hide">
+  <button id="powerbtn" disabled>Rayo<br>Solar</button>
+</div>
+
+<div class="hud" id="cmd">
+  <div id="cmd-head">
+    <span id="cmd-title">Dominion Realms</span>
+    <span id="cmd-sub">Tocá una unidad o edificio</span>
+  </div>
+  <div id="cmd-grid"></div>
+</div>
+
+<div id="toast" class="hud"></div>
+<div id="groupbar" class="hud"></div>
+<div id="templebar" class="hud hide"><span>⛪ Templo Sagrado</span><div class="track"><div class="fill" id="temple-fill"></div></div><b id="temple-txt"></b></div>
+<div id="hurtflash"></div>
+
+<!-- START -->
+<div class="overlay" id="start">
+  <div class="panel">
+    <h1>DOMINION REALMS</h1>
+    <div class="tag">RTS mitológico · Vertical Slice · Civilización: Aurelion</div>
+    <p>Empezás con un <b>Centro</b> y unos aldeanos. Recolectá <span class="swatch" style="background:#e06a5c"></span>comida,
+    <span class="swatch" style="background:#9b7a4a"></span>madera, <span class="swatch" style="background:#e8b23a"></span>oro y
+    <span class="swatch" style="background:#9a93a6"></span>piedra,
+    levantá tu ciudad (la <b>Herrería</b> da mejoras permanentes de ataque, armadura y recolección),
+    avanzá a la <b>Era de los Templos</b> para desbloquear el <b>Favor</b>
+    <span class="swatch" style="background:#7fd0ff"></span>, las unidades míticas y el <b>Rayo Solar</b>.
+    Destruí el Centro enemigo para ganar.</p>
+
+    <div style="font-size:13px;color:var(--sun);margin-top:8px;">Dificultad</div>
+    <div class="seg" id="diff">
+      <button class="btn sm" data-d="0">Fácil</button>
+      <button class="btn sm" data-d="1" aria-pressed="true">Normal</button>
+      <button class="btn sm" data-d="2">Difícil</button>
+    </div>
+
+    <div class="legend">
+      <span>🖱️ Click / toque: seleccionar</span>
+      <span>📦 Click+arrastrar: caja (PC)</span>
+      <span>👉 Click en suelo: mover/atacar</span>
+      <span>✌️ Arrastrar mapa: mover cámara</span>
+      <span>🔍 Rueda / pellizco: zoom</span>
+      <span>⌨️ WASD / flechas: cámara</span>
+      <span>🔢 Ctrl+1–9: grupos · 1–9: traer</span>
+      <span>⎵ Espacio: ir a la última alerta</span>
+    </div>
+    <p style="font-size:12px;color:var(--parch-dim);margin-top:4px;">
+    Victoria: destruí el <b>Centro</b> enemigo, o controlá el <b>Templo Sagrado</b> central 90s seguidos.
+    Al seleccionar tropas aparecen las <b>posturas</b> (Agresiva/Defensiva/Mantener/Pasiva).</p>
+    <div class="row" style="margin-top:12px;">
+      <button class="btn gold" id="btn-start" style="flex:1;padding:11px;">Comenzar partida</button>
+    </div>
+  </div>
+</div>
+
+<!-- END -->
+<div class="overlay hide" id="end">
+  <div class="panel" style="text-align:center;">
+    <h1 id="end-title">Victoria</h1>
+    <div class="tag" id="end-tag"></div>
+    <p id="end-body"></p>
+    <div class="row" style="justify-content:center;">
+      <button class="btn gold" id="btn-again" style="padding:11px 22px;">Jugar de nuevo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =========================================================================
+   DOMINION REALMS — Vertical Slice (HTML5 Canvas, vanilla JS, offline)
+   Loop: economía -> construir -> era -> ejército -> conquista.
+   ========================================================================= */
+
+// ---------- Config / balance ----------
+const TILE = 34;
+const MAP_W = 46, MAP_H = 42;
+const WORLD_W = MAP_W * TILE, WORLD_H = MAP_H * TILE;
+
+const COLORS = {
+  player:'#E8B23A', playerDk:'#9c7415',
+  enemy:'#8a6bff', enemyDk:'#5b43c0',
+  neutral:'#9aa0b5',
+  grass:'#7d8c5a', grass2:'#75835a', sand:'#b8a777',
+  forest:'#34543a', forestTop:'#3f6a45',
+  goldRock:'#caa23e', stone:'#9a93a6', water:'#2f6173', waterEdge:'#3b7488',
+};
+
+// Unit & building definitions
+const DEF = {
+  // ---- units ----
+  villager:{ kind:'unit', name:'Aldeano', hp:45, dmg:4, range:1.1, speed:72, atkCd:1.2,
+             pop:1, vision:5, cost:{food:50}, train:11, r:8, build:true, gather:true, carryCap:14, gatherRate:0.9 },
+  soldier:{  kind:'unit', name:'Infantería', hp:120, dmg:13, range:1.15, speed:74, atkCd:1.05,
+             pop:1, vision:5, cost:{food:60,gold:20}, train:15, r:9, mil:true },
+  spearman:{ kind:'unit', name:'Lancero', hp:100, dmg:9, range:1.3, speed:82, atkCd:1.3,
+             pop:1, vision:5, cost:{food:50,wood:25}, train:14, r:9, mil:true, bonusVsMyth:3.0 },
+  archer:{   kind:'unit', name:'Arquero', hp:62, dmg:10, range:4.2, speed:70, atkCd:1.45,
+             pop:1, vision:6, cost:{wood:45,gold:25}, train:16, r:8, mil:true, ranged:true },
+  guardian:{ kind:'unit', name:'Guardián del Sol', hp:340, dmg:30, range:1.4, speed:60, atkCd:1.5,
+             pop:4, vision:6, cost:{favor:40,gold:80}, train:30, r:13, mil:true, myth:true, era:2 },
+  // ---- buildings ----
+  towncenter:{ kind:'building', name:'Centro', hp:1900, fp:3, vision:8, dropoff:true,
+               trains:['villager'], ageup:true },
+  house:{ kind:'building', name:'Casa', hp:480, fp:2, vision:4, cost:{wood:30}, popAdd:5 },
+  farm:{ kind:'building', name:'Granja', hp:260, fp:2, vision:3, cost:{wood:60}, foodSrc:650 },
+  barracks:{ kind:'building', name:'Cuartel', hp:850, fp:2, vision:5, cost:{wood:120}, trains:['soldier','spearman'] },
+  archery:{ kind:'building', name:'Arquería', hp:720, fp:2, vision:5, cost:{wood:140}, trains:['archer'] },
+  blacksmith:{ kind:'building', name:'Herrería', hp:780, fp:2, vision:4, cost:{wood:120,stone:50}, research:true },
+  temple:{ kind:'building', name:'Templo', hp:950, fp:2, vision:6, cost:{wood:120,gold:60,stone:40}, era:2,
+           trains:['guardian'], favorRate:0.45, enablesPower:true },
+  tower:{ kind:'building', name:'Torre', hp:760, fp:1, vision:7, cost:{wood:90,stone:40}, atk:{dmg:15,range:5.2,cd:0.95} },
+  sacred:{ kind:'building', name:'Templo Sagrado', hp:99999, fp:2, vision:6, neutralCtrl:true, favorRate:0.6 },
+};
+
+const AGEUP_COST = {food:200, gold:100};
+const AGEUP_TIME = 28;
+const POP_BASE = 10, POP_MAX = 60, FAVOR_MAX = 100;
+
+const POWER = { cost:25, radius:2.3, dmgUnit:130, dmgBuild:65, cd:34 };
+
+// Blacksmith upgrades (per owner, leveled). Effects applied in combat/gather math.
+const UPG = {
+  melAtk:{ name:'Armas de Filo', icon:'⚔', max:3, desc:'+20% daño cuerpo a cuerpo', cost:l=>({wood:60+l*40, gold:40+l*30}) },
+  ranAtk:{ name:'Puntas de Flecha', icon:'🏹', max:3, desc:'+20% daño de arqueros', cost:l=>({wood:60+l*40, gold:40+l*30}) },
+  armor:{ name:'Armadura', icon:'🛡', max:3, desc:'−2 daño recibido (militares)', cost:l=>({wood:50+l*40, stone:30+l*30}) },
+  gather:{ name:'Herramientas', icon:'⛏', max:3, desc:'+15% recolección', cost:l=>({wood:60+l*40, gold:30+l*20}) },
+};
+const UPG_KEYS = ['melAtk','ranAtk','armor','gather'];
+
+const DIFF = [
+  { name:'Fácil',  botVills:11, armyCap:14, wave0:4, waveGrow:1, botRate:0.85, firstAttack:300 },
+  { name:'Normal', botVills:15, armyCap:22, wave0:5, waveGrow:2, botRate:1.0,  firstAttack:220 },
+  { name:'Difícil',botVills:19, armyCap:34, wave0:7, waveGrow:3, botRate:1.18, firstAttack:150 },
+];
+
+// ---------- Globals ----------
+const cv = document.getElementById('game');
+const ctx = cv.getContext('2d');
+const mm = document.getElementById('minimap');
+const mmx = mm.getContext('2d');
+let DPR = 1, VIEW_W = 0, VIEW_H = 0;
+
+let S = null;          // game state
+let saveSlot = null;   // in-memory snapshot
+let diffIdx = 1;
+let lastTime = 0;
+let fogTimer = 0;
+let terrainCv = null, tctx = null;   // offscreen terrain cache
+
+// ---------- Helpers ----------
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
+const d2=(ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by;return dx*dx+dy*dy;};
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const tileC=t=>t*TILE+TILE/2;            // tile index -> world center
+const toTile=w=>Math.floor(w/TILE);
+let _id=1; const nid=()=>_id++;
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),1600);
+}
+
+// ---------- Extra tuning ----------
+const GRID_CELL = TILE*3;          // spatial hash cell size
+const TEMPLE_WIN = 90;             // seconds holding sacred temple to win
+const LEASH = 6*TILE;              // defensive-stance chase leash
+
+// ---------- Sound (synthesized via Web Audio, no asset files) ----------
+let AC=null, muted=false, masterGain=null, _sfxT={};
+function audioInit(){ if(AC)return; try{
+    AC=new (window.AudioContext||window.webkitAudioContext)();
+    masterGain=AC.createGain(); masterGain.gain.value=0.5; masterGain.connect(AC.destination);
+  }catch(e){ AC=null; } }
+function audioResume(){ if(AC&&AC.state==='suspended')AC.resume(); }
+function blip(freq,dur,type,vol,slideTo){ if(muted||!AC)return;
+  const o=AC.createOscillator(), g=AC.createGain(); o.type=type||'sine';
+  const t=AC.currentTime; o.frequency.setValueAtTime(freq,t);
+  if(slideTo)o.frequency.exponentialRampToValueAtTime(Math.max(40,slideTo),t+dur);
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol||0.3,t+0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g); g.connect(masterGain); o.start(t); o.stop(t+dur+0.02); }
+function noise(dur,vol,freq){ if(muted||!AC)return;
+  const n=Math.floor(AC.sampleRate*dur), b=AC.createBuffer(1,n,AC.sampleRate), d=b.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);
+  const s=AC.createBufferSource(); s.buffer=b; const g=AC.createGain(); g.gain.value=vol||0.2;
+  const f=AC.createBiquadFilter(); f.type='bandpass'; f.frequency.value=freq||1400;
+  s.connect(f); f.connect(g); g.connect(masterGain); s.start(); }
+function sfx(name){ if(muted||!AC)return; const now=AC.currentTime;
+  if(_sfxT[name]&&now-_sfxT[name]<0.045)return; _sfxT[name]=now;
+  switch(name){
+    case 'select': blip(660,0.06,'triangle',0.16); break;
+    case 'move':   blip(430,0.05,'sine',0.13); break;
+    case 'place':  blip(240,0.13,'square',0.18,170); break;
+    case 'train':  blip(540,0.12,'triangle',0.2,760); break;
+    case 'done':   blip(523,0.1,'triangle',0.22); setTimeout(()=>blip(784,0.16,'triangle',0.22),90); break;
+    case 'melee':  noise(0.05,0.11,900); blip(170,0.05,'square',0.09,90); break;
+    case 'arrow':  blip(880,0.08,'sine',0.09,300); break;
+    case 'die':    blip(150,0.26,'sawtooth',0.18,55); break;
+    case 'alert':  blip(880,0.15,'square',0.3,440); setTimeout(()=>blip(660,0.18,'square',0.3,330),140); break;
+    case 'power':  blip(300,0.7,'sawtooth',0.3,1700); noise(0.55,0.18,1200); break;
+    case 'era':    blip(523,0.2,'triangle',0.28); setTimeout(()=>blip(784,0.34,'triangle',0.28),160); break;
+    case 'win':    [523,659,784,1047].forEach((f,i)=>setTimeout(()=>blip(f,0.3,'triangle',0.28),i*150)); break;
+    case 'lose':   [392,330,262].forEach((f,i)=>setTimeout(()=>blip(f,0.42,'sawtooth',0.24,f*0.7),i*190)); break;
+  }
+}
+
+// ---------- Map ----------
+function makeMap(){
+  const tiles=new Array(MAP_W*MAP_H);
+  for(let y=0;y<MAP_H;y++)for(let x=0;x<MAP_W;x++){
+    tiles[y*MAP_W+x]={type:'grass', amount:0, v:Math.random()<0.5?0:1};
+  }
+  const set=(x,y,type,amount)=>{ if(x<0||y<0||x>=MAP_W||y>=MAP_H)return;
+    const t=tiles[y*MAP_W+x]; t.type=type; if(amount!=null)t.amount=amount; };
+
+  // a lake-ish water blob (avoid centre & bases)
+  function blob(cx,cy,rad,type,amt){
+    for(let y=cy-rad;y<=cy+rad;y++)for(let x=cx-rad;x<=cx+rad;x++){
+      if(dist(x,y,cx,cy)<=rad-Math.random()*1.2) set(x,y,type,amt);
+    }
+  }
+  blob(ri(18,28), ri(8,14), ri(2,3),'water');
+  blob(ri(18,28), ri(MAP_H-15,MAP_H-9), ri(2,3),'water');
+
+  // forests (clusters)
+  for(let i=0;i<10;i++){ const cx=ri(4,MAP_W-5),cy=ri(4,MAP_H-5);
+    for(let j=0;j<ri(6,13);j++){ const x=cx+ri(-2,2),y=cy+ri(-2,2);
+      if(tiles[Math.max(0,Math.min(MAP_H-1,y))*MAP_W+Math.max(0,Math.min(MAP_W-1,x))].type==='grass')
+        set(x,y,'forest',120); } }
+  // gold deposits
+  for(let i=0;i<7;i++){ const x=ri(3,MAP_W-4),y=ri(3,MAP_H-4);
+    if(tiles[y*MAP_W+x].type==='grass'){ set(x,y,'gold',420); if(Math.random()<.5)set(x+1,y,'gold',420); } }
+  // stone deposits
+  for(let i=0;i<6;i++){ const x=ri(3,MAP_W-4),y=ri(3,MAP_H-4);
+    if(tiles[y*MAP_W+x].type==='grass'){ set(x,y,'stone',360); if(Math.random()<.5)set(x+1,y,'stone',360); } }
+  // berries (food)
+  for(let i=0;i<8;i++){ const x=ri(3,MAP_W-4),y=ri(3,MAP_H-4);
+    if(tiles[y*MAP_W+x].type==='grass') set(x,y,'berry',280); }
+
+  return { w:MAP_W, h:MAP_H, tiles };
+}
+const at=(tx,ty)=> (tx<0||ty<0||tx>=MAP_W||ty>=MAP_H)?null:S.map.tiles[ty*MAP_W+tx];
+
+// occupancy grid for buildings (blocks pathing)
+function rebuildOccupancy(){
+  S.occ=new Uint8Array(MAP_W*MAP_H);
+  for(const e of S.entities){ if(e.kind!=='building')continue;
+    for(let y=e.ty;y<e.ty+e.fp;y++)for(let x=e.tx;x<e.tx+e.fp;x++){
+      if(x>=0&&y>=0&&x<MAP_W&&y<MAP_H) S.occ[y*MAP_W+x]=1; } }
+}
+function tileWalkable(tx,ty){
+  const t=at(tx,ty); if(!t)return false;
+  if(t.type==='water'||t.type==='forest'||t.type==='gold'||t.type==='berry'||t.type==='stone')return false;
+  if(S.occ && S.occ[ty*MAP_W+tx])return false;
+  return true;
+}
+function tileBlocksSight(tx,ty){ const t=at(tx,ty); return t&&(t.type==='forest'); }
+
+// ---------- A* pathfinding (grid, 8-dir, no corner cutting) ----------
+function findPath(sx,sy,gx,gy){
+  if(!tileWalkable(gx,gy)){ const n=nearestWalkable(gx,gy); if(!n)return null; gx=n.x;gy=n.y; }
+  if(sx===gx&&sy===gy)return [{x:tileC(gx),y:tileC(gy)}];
+  const W=MAP_W,H=MAP_H, N=W*H;
+  const open=[], came=new Int32Array(N).fill(-1);
+  const g=new Float32Array(N).fill(Infinity);
+  const start=sy*W+sx, goal=gy*W+gx;
+  g[start]=0;
+  const h=(i)=>{const x=i%W,y=(i/W)|0;return Math.hypot(x-gx,y-gy);};
+  open.push({i:start,f:h(start)});
+  const closed=new Uint8Array(N);
+  let iter=0;
+  const D=[[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.414],[1,-1,1.414],[-1,1,1.414],[-1,-1,1.414]];
+  while(open.length){
+    if(++iter>6000)break;
+    // pop min f (linear; maps are small)
+    let bi=0; for(let k=1;k<open.length;k++) if(open[k].f<open[bi].f) bi=k;
+    const cur=open.splice(bi,1)[0].i;
+    if(cur===goal) return reconstruct(came,cur,W);
+    if(closed[cur])continue; closed[cur]=1;
+    const cx=cur%W, cy=(cur/W)|0;
+    for(const [dx,dy,c] of D){
+      const nx=cx+dx, ny=cy+dy;
+      if(nx<0||ny<0||nx>=W||ny>=H)continue;
+      if(!tileWalkable(nx,ny))continue;
+      if(dx&&dy){ if(!tileWalkable(cx+dx,cy)||!tileWalkable(cx,cy+dy))continue; } // no cut
+      const ni=ny*W+nx; if(closed[ni])continue;
+      const ng=g[cur]+c;
+      if(ng<g[ni]){ g[ni]=ng; came[ni]=cur; open.push({i:ni,f:ng+h(ni)}); }
+    }
+  }
+  return null;
+}
+function reconstruct(came,cur,W){
+  const path=[];
+  while(cur!==-1){ path.push({x:tileC(cur%W),y:tileC((cur/W)|0)}); cur=came[cur]; }
+  path.reverse(); return path;
+}
+function nearestWalkable(tx,ty){
+  for(let r=0;r<=6;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+    if(Math.max(Math.abs(dx),Math.abs(dy))!==r)continue;
+    const x=tx+dx,y=ty+dy; if(tileWalkable(x,y))return {x,y};
+  } return null;
+}
+
+// ---------- Entities ----------
+function spawn(type, owner, wx, wy){
+  const def=DEF[type];
+  const e={ id:nid(), type, owner, kind:def.kind, x:wx, y:wy,
+            hp:def.hp, maxhp:def.hp, def,
+            state:'idle', path:null, pi:0, goal:null, target:null,
+            atkTimer:0, attackMove:false, anim:Math.random()*6 };
+  if(def.kind==='unit'){
+    e.r=def.r; if(def.gather){ e.carry=0; e.gatherType=null; e.home=null; e.resTile=null; }
+    if(def.mil){ e.stance='aggressive'; e.guard={x:wx,y:wy}; } else { e.stance='passive'; }
+  }else{
+    e.fp=def.fp; e.tx=toTile(wx-(def.fp*TILE)/2); e.ty=toTile(wy-(def.fp*TILE)/2);
+    e.tx=clamp(e.tx,0,MAP_W-def.fp); e.ty=clamp(e.ty,0,MAP_H-def.fp);
+    e.x=tileC(e.tx)+ (def.fp-1)*TILE/2; e.y=tileC(e.ty)+ (def.fp-1)*TILE/2;
+    e.built=true; e.prog=1; e.queue=[]; e.qTimer=0;
+    e.rally=null; if(def.atk)e.atkTimer=0;
+    if(def.ageup)e.ageTimer=0;
+    if(def.neutralCtrl)e.ctrl='neutral';
+  }
+  S.entities.push(e);
+  return e;
+}
+function placeBuildingFoundation(type, owner, tx, ty, builders){
+  const def=DEF[type];
+  tx=clamp(tx,0,MAP_W-def.fp); ty=clamp(ty,0,MAP_H-def.fp);
+  const e={ id:nid(), type, owner, kind:'building', def, fp:def.fp, tx, ty,
+            x:tileC(tx)+(def.fp-1)*TILE/2, y:tileC(ty)+(def.fp-1)*TILE/2,
+            hp:Math.max(1,def.hp*0.08), maxhp:def.hp, built:false, prog:0,
+            state:'idle', queue:[], qTimer:0, rally:null, anim:0 };
+  if(def.atk)e.atkTimer=0;
+  S.entities.push(e); rebuildOccupancy();
+  if(owner==='player')sfx('place');
+  if(builders) for(const b of builders){ b.target=e.id; b.state='build'; b.goal=null; b.path=null; }
+  return e;
+}
+const ent=id=>S.entities.find(e=>e.id===id);
+function footprintRect(e){ return {x:e.tx*TILE,y:e.ty*TILE,w:e.fp*TILE,h:e.fp*TILE}; }
+function entRadius(e){ return e.kind==='unit'? e.r : (e.fp*TILE*0.5); }
+
+// distance from a point to entity's body (edge for buildings)
+function distToEnt(px,py,e){
+  if(e.kind==='unit')return dist(px,py,e.x,e.y);
+  const r=footprintRect(e);
+  const cx=clamp(px,r.x,r.x+r.w), cy=clamp(py,r.y,r.y+r.h);
+  return dist(px,py,cx,cy);
+}
+
+// ---------- Resources / pop ----------
+function res(o){ return S.res[o]; }
+function canAfford(owner,cost){ const r=res(owner); for(const k in cost) if((r[k]||0)<cost[k])return false; return true; }
+function pay(owner,cost){ const r=res(owner); for(const k in cost) r[k]-=cost[k]; }
+function refund(owner,cost,f=1){ const r=res(owner); for(const k in cost) r[k]+=cost[k]*f; }
+function popCap(owner){
+  let cap=POP_BASE;
+  for(const e of S.entities) if(e.owner===owner&&e.kind==='building'&&e.built&&e.def.popAdd) cap+=e.def.popAdd;
+  return Math.min(POP_MAX,cap);
+}
+function popUsed(owner){
+  let p=0; for(const e of S.entities) if(e.owner===owner&&e.kind==='unit') p+=e.def.pop; return p;
+}
+function era(owner){ return S.era[owner]; }
+
+// ---------- Commands ----------
+function setMove(e,wx,wy,attackMove){
+  const p=findPath(toTile(e.x),toTile(e.y),toTile(wx),toTile(wy));
+  e.goal={x:wx,y:wy}; e.attackMove=!!attackMove; e.target=null;
+  if(e.gatherType!==undefined){ e.state='move'; e.gatherType=null; e.resTile=null; e.carry=e.carry; }
+  else e.state='move';
+  e.path=p; e.pi=0;
+  if(!p){ e.path=[{x:wx,y:wy}]; }
+}
+function formationSlots(n, cx, cy, spacing){
+  if(n<=1) return [{x:cx,y:cy}];
+  const cols=Math.ceil(Math.sqrt(n)), rows=Math.ceil(n/cols);
+  const ox=(cols-1)/2, oy=(rows-1)/2; const slots=[];
+  for(let i=0;i<n;i++){ const r=Math.floor(i/cols), c=i%cols;
+    slots.push({x:cx+(c-ox)*spacing, y:cy+(r-oy)*spacing}); }
+  return slots;
+}
+function distributeMove(units, wx, wy){
+  const slots=formationSlots(units.length, wx, wy, 22);
+  const used=new Array(slots.length).fill(false);
+  for(const u of units){ let bi=-1,bd=1e18;
+    for(let i=0;i<slots.length;i++){ if(used[i])continue; const dd=d2(u.x,u.y,slots[i].x,slots[i].y); if(dd<bd){bd=dd;bi=i;} }
+    if(bi<0)bi=0; used[bi]=true; const s=slots[bi];
+    const gx=clamp(s.x,TILE*0.5,WORLD_W-TILE*0.5), gy=clamp(s.y,TILE*0.5,WORLD_H-TILE*0.5);
+    setMove(u,gx,gy,u.def.mil); if(u.def.mil)u.guard={x:gx,y:gy}; }
+}
+function orderToGround(wx,wy){
+  const tx=toTile(wx),ty=toTile(wy), t=at(tx,ty);
+  const mil=[], vil=[];
+  for(const id of S.sel){ const e=ent(id); if(!e||e.owner!=='player'||e.kind!=='unit')continue;
+    (e.def.gather?vil:mil).push(e); }
+  // villagers: if resource tile -> gather; else move in formation
+  if(t&&(t.type==='forest'||t.type==='gold'||t.type==='berry'||t.type==='stone')){
+    for(const v of vil) assignGather(v,tx,ty);
+    distributeMove(mil,wx,wy);
+    fxPing(tileC(tx),tileC(ty),'#7fd0ff'); sfx('move'); return;
+  }
+  distributeMove([...mil,...vil],wx,wy);
+  fxPing(wx,wy,'#fff'); sfx('move');
+}
+function orderToEnemy(target){
+  for(const id of S.sel){ const e=ent(id); if(!e||e.owner!=='player'||e.kind!=='unit')continue;
+    if(e.def.gather&&!e.def.mil&&e.type==='villager'&&target.kind==='unit')continue; // villagers don't chase troops
+    e.target=target.id; e.state='attack'; e.goal=null; e.attackMove=false; e.gatherType=null;
+    if(e.def.mil)e.guard={x:target.x,y:target.y}; // commanded attack: re-anchor so defensive stance can reach
+  }
+  fxPing(target.x,target.y,'#d8554f'); sfx('move');
+}
+function assignGather(v,tx,ty){
+  v.resTile={tx,ty}; v.state='gather'; v.target=null; v.goal=null; v.attackMove=false;
+  const adj=nearestWalkable(tx,ty); v.gatherType=at(tx,ty).type;
+  if(adj){ v.path=findPath(toTile(v.x),toTile(v.y),adj.x,adj.y)||[{x:tileC(adj.x),y:tileC(adj.y)}]; v.pi=0; }
+}
+function nearestDropoff(owner,x,y){
+  let best=null,bd=1e9; for(const e of S.entities)
+    if(e.owner===owner&&e.kind==='building'&&e.built&&e.def.dropoff){
+      const dd=distToEnt(x,y,e); if(dd<bd){bd=dd;best=e;} } return best;
+}
+function nearestRes(type,x,y){
+  let best=null,bd=1e9;
+  for(let ty=0;ty<MAP_H;ty++)for(let tx=0;tx<MAP_W;tx++){
+    const t=at(tx,ty); if(t.type!==type||t.amount<=0)continue;
+    const dd=d2(x,y,tileC(tx),tileC(ty)); if(dd<bd){bd=dd;best={tx,ty};} }
+  return best;
+}
+
+// ---------- Combat math ----------
+function upg(owner){ return (S.upg&&S.upg[owner])||{melAtk:0,ranAtk:0,armor:0,gather:0}; }
+function atkMult(owner,ranged){ const u=upg(owner); return 1 + (ranged?u.ranAtk:u.melAtk)*0.2; }
+function armorRed(owner){ return upg(owner).armor*2; }
+function gatherMult(owner){ return 1 + upg(owner).gather*0.15; }
+function dmgVs(attacker,target){
+  let d=attacker.def.dmg;
+  if(attacker.def.bonusVsMyth&&target.def&&target.def.myth) d*=attacker.def.bonusVsMyth;
+  d*=atkMult(attacker.owner, attacker.def.ranged);
+  return d;
+}
+function hurt(target,amount,fromOwner){
+  if(target.kind==='unit' && target.def.mil) amount=Math.max(1, amount-armorRed(target.owner));
+  target.hp-=amount;
+  if(target.owner==='player' && fromOwner==='enemy') notifyAttack(target);
+  if(target.hp<=0) killEntity(target);
+}
+function notifyAttack(e){
+  S.lastAtk={x:e.x,y:e.y,t:S.time};
+  if(S.time-(S._alertT==null?-99:S._alertT)>6){ S._alertT=S.time;
+    toast('⚠ ¡Estás bajo ataque!'); sfx('alert'); fxPing(e.x,e.y,'#ff5b5b'); flashHurt(); }
+}
+function flashHurt(){ const el=document.getElementById('hurtflash'); if(!el)return;
+  el.classList.remove('go'); void el.offsetWidth; el.classList.add('go'); }
+function killEntity(e){
+  e.dead=true;
+  sfx('die');
+  fxDeath(e);
+}
+
+// ---------- Visual FX ----------
+function fxPing(x,y,color){ S.fx.push({t:'ping',x,y,color,life:0.5,max:0.5}); }
+function fxDeath(e){ S.fx.push({t:'death',x:e.x,y:e.y,color:e.owner==='player'?COLORS.player:e.owner==='enemy'?COLORS.enemy:COLORS.neutral,life:0.5,max:0.5,big:e.kind==='building'}); }
+function fxHit(x,y){ S.fx.push({t:'hit',x,y,life:0.18,max:0.18}); }
+function fxArrow(x,y,tx,ty){ S.fx.push({t:'arrow',x,y,tx,ty,life:0.12,max:0.12}); }
+function fxSolar(x,y){ S.fx.push({t:'solar',x,y,life:0.9,max:0.9,r:POWER.radius*TILE}); }
+
+// ---------- Spatial hash (rebuilt each frame; cuts target/separation cost) ----------
+function buildGrid(){
+  const cs=GRID_CELL, gw=Math.ceil(WORLD_W/cs), gh=Math.ceil(WORLD_H/cs);
+  const cells=new Array(gw*gh);
+  const put=(cx,cy,e)=>{ if(cx<0||cy<0||cx>=gw||cy>=gh)return; const k=cy*gw+cx; (cells[k]||(cells[k]=[])).push(e); };
+  for(const e of S.entities){ if(e.dead)continue;
+    if(e.kind==='building'){ const r=footprintRect(e);
+      const x0=Math.floor(r.x/cs),x1=Math.floor((r.x+r.w)/cs),y0=Math.floor(r.y/cs),y1=Math.floor((r.y+r.h)/cs);
+      for(let cy=y0;cy<=y1;cy++)for(let cx=x0;cx<=x1;cx++)put(cx,cy,e); }
+    else put(Math.floor(e.x/cs),Math.floor(e.y/cs),e); }
+  S.grid={cs,gw,gh,cells};
+}
+function nearbyEnts(x,y,radius,cb){ const g=S.grid; if(!g){ for(const e of S.entities)cb(e); return; }
+  const cs=g.cs;
+  const x0=Math.max(0,Math.floor((x-radius)/cs)),x1=Math.min(g.gw-1,Math.floor((x+radius)/cs));
+  const y0=Math.max(0,Math.floor((y-radius)/cs)),y1=Math.min(g.gh-1,Math.floor((y+radius)/cs));
+  for(let cy=y0;cy<=y1;cy++)for(let cx=x0;cx<=x1;cx++){ const arr=g.cells[cy*g.gw+cx]; if(arr)for(const e of arr)cb(e); }
+}
+
+// ============================ UPDATE =====================================
+function update(dt){
+  if(!S||S.over)return;
+  S.time+=dt;
+  buildGrid();
+  // resource income (favor) + central temple control
+  updateFavor(dt);
+  // training queues (player + enemy buildings)
+  for(const e of S.entities){ if(e.kind==='building'&&!e.dead) updateBuilding(e,dt); }
+  // unit logic
+  for(const e of S.entities){ if(e.kind==='unit'&&!e.dead) updateUnit(e,dt); }
+  // towers
+  for(const e of S.entities){ if(e.kind==='building'&&e.built&&!e.dead&&e.def.atk) updateTower(e,dt); }
+  // power cooldown
+  if(S.power.cd>0)S.power.cd=Math.max(0,S.power.cd-dt);
+  // bot
+  botThink(dt);
+  // cleanup dead
+  if(S.entities.some(e=>e.dead)){
+    S.entities=S.entities.filter(e=>!e.dead);
+    S.sel=S.sel.filter(id=>ent(id));
+    for(const g in S.groups){ S.groups[g]=S.groups[g].filter(id=>ent(id)); if(!S.groups[g].length)delete S.groups[g]; }
+    updateGroupBar();
+    rebuildOccupancy(); refreshFog(true);
+  }
+  // fog refresh (periodic)
+  fogTimer+=dt; if(fogTimer>0.25){ fogTimer=0; refreshFog(false); }
+  // fx
+  for(const f of S.fx) f.life-=dt; S.fx=S.fx.filter(f=>f.life>0);
+  // win/lose
+  checkEnd();
+}
+
+function updateFavor(dt){
+  // sacred temple control = side with most military units within radius
+  const sac=S.entities.find(e=>e.type==='sacred');
+  if(sac){
+    let cp=0,ce=0; const R=4.2*TILE;
+    for(const e of S.entities){ if(e.kind!=='unit'||!e.def.mil)continue;
+      if(distToEnt(e.x,e.y,sac)<R){ if(e.owner==='player')cp++; else if(e.owner==='enemy')ce++; } }
+    if(cp>ce)sac.ctrl='player'; else if(ce>cp)sac.ctrl='enemy'; else sac.ctrl=sac.ctrl||'neutral';
+    // hold-to-win progress
+    if(sac.ctrl==='player'){ S.templeHold.player+=dt; S.templeHold.enemy=Math.max(0,S.templeHold.enemy-dt*2); }
+    else if(sac.ctrl==='enemy'){ S.templeHold.enemy+=dt; S.templeHold.player=Math.max(0,S.templeHold.player-dt*2); }
+    else { S.templeHold.player=Math.max(0,S.templeHold.player-dt); S.templeHold.enemy=Math.max(0,S.templeHold.enemy-dt); }
+  }
+  for(const owner of ['player','enemy']){
+    let rate=0;
+    for(const e of S.entities) if(e.owner===owner&&e.kind==='building'&&e.built&&e.def.favorRate) rate+=e.def.favorRate;
+    if(sac&&sac.ctrl===owner) rate+=DEF.sacred.favorRate;
+    if(era(owner)>=2 || rate>0){ res(owner).favor=Math.min(FAVOR_MAX, res(owner).favor + rate*dt); }
+  }
+}
+
+function updateBuilding(e,dt){
+  if(!e.built)return;
+  // age up
+  if(e.ageTimer!=null && e.ageTimer>0){
+    e.ageTimer-=dt;
+    if(e.ageTimer<=0){ e.ageTimer=0; S.era[e.owner]=2;
+      if(e.owner==='player'){ toast('¡Era de los Templos! Templo, Guardián y Rayo Solar disponibles.'); sfx('era');
+        document.getElementById('eraname').textContent='Era de los Templos'; updatePowerUI(); refreshPanel(); } }
+    return; // busy ageing
+  }
+  // training queue
+  if(e.queue.length){
+    e.qTimer-=dt;
+    if(e.qTimer<=0){
+      const t=e.queue.shift();
+      finishTrain(e,t);
+      if(e.queue.length) e.qTimer=DEF[e.queue[0]].train;
+    }
+  }
+}
+function finishTrain(b,type){
+  // spawn near building at a walkable tile, send to rally
+  const out=nearestWalkable(b.tx+b.fp, b.ty+Math.floor(b.fp/2)) ||
+            nearestWalkable(b.tx-1, b.ty) || {x:b.tx,y:b.ty+b.fp};
+  const u=spawn(type,b.owner,tileC(out.x),tileC(out.y));
+  if(b.owner==='player')sfx('train');
+  const rp=b.rally;
+  if(rp){ if(u.def.gather && at(toTile(rp.x),toTile(rp.y)) &&
+              ['forest','gold','berry','stone'].includes(at(toTile(rp.x),toTile(rp.y)).type))
+            assignGather(u,toTile(rp.x),toTile(rp.y));
+          else setMove(u,rp.x,rp.y,!!u.def.mil); }
+  else if(u.def.gather){ // auto-gather nearest food/wood
+    const r=nearestRes('berry',u.x,u.y)||nearestRes('forest',u.x,u.y)||nearestRes('gold',u.x,u.y);
+    if(r)assignGather(u,r.tx,r.ty);
+  }
+}
+
+function updateTower(e,dt){
+  e.atkTimer-=dt; if(e.atkTimer>0)return;
+  const range=e.def.atk.range*TILE;
+  let best=null,bd=range;
+  nearbyEnts(e.x,e.y,range,o=>{ if(o.kind!=='unit'||o.dead)return; if(o.owner===e.owner||o.owner==='neutral')return;
+    const dd=dist(e.x,e.y,o.x,o.y); if(dd<bd){bd=dd;best=o;} });
+  if(best){ fxArrow(e.x,e.y-10,best.x,best.y); hurt(best,e.def.atk.dmg,e.owner); fxHit(best.x,best.y); sfx('arrow');
+    e.atkTimer=e.def.atk.cd; }
+}
+
+function updateUnit(e,dt){
+  e.anim+=dt;
+  if(e.atkTimer>0)e.atkTimer-=dt;
+
+  // auto-acquire for idle military (respecting stance)
+  if(e.def.mil && e.stance!=='passive' && (e.state==='idle' || (e.attackMove&&e.state==='move'))){
+    const aRange = e.stance==='hold' ? (e.def.range*TILE+TILE*0.6) : (e.attackMove?6*TILE:7*TILE);
+    const tgt=acquireTarget(e, aRange);
+    if(tgt){ e.target=tgt.id; e.engaging=true; e.state='attack'; }
+  }
+
+  switch(e.state){
+    case 'move': stepMove(e,dt,()=>{ e.state='idle'; }); break;
+    case 'attack': doAttack(e,dt); break;
+    case 'gather': doGather(e,dt); break;
+    case 'return': doReturn(e,dt); break;
+    case 'build': doBuild(e,dt); break;
+    default: /* idle */ break;
+  }
+  // separation (gentle) to avoid stacking
+  if(e.state!=='gather'){
+    let sx=0,sy=0,n=0;
+    nearbyEnts(e.x,e.y,e.r*3,o=>{ if(o===e||o.kind!=='unit'||o.dead)return;
+      const dd=d2(e.x,e.y,o.x,o.y); const min=(e.r+o.r); if(dd>0&&dd<min*min){
+        const d=Math.sqrt(dd)||1; sx+=(e.x-o.x)/d; sy+=(e.y-o.y)/d; n++; } });
+    if(n){ const push=22*dt; const nx=e.x+ (sx/n)*push, ny=e.y+(sy/n)*push;
+      if(tileWalkable(toTile(nx),toTile(e.y)))e.x=nx;
+      if(tileWalkable(toTile(e.x),toTile(ny)))e.y=ny; }
+  }
+}
+
+function acquireTarget(e,range){
+  let best=null,bd=range;
+  nearbyEnts(e.x,e.y,range,o=>{ if(o.dead)return; if(o.owner===e.owner||o.owner==='neutral')return;
+    if(o.kind==='building'&&!o.built&&o.hp<=1)return;
+    const dd=distToEnt(e.x,e.y,o); if(dd<bd){bd=dd;best=o;} });
+  return best;
+}
+
+function stepMove(e,dt,onArrive){
+  if(!e.path||e.pi>=e.path.length){ if(e.goal){e.x=e.x;} onArrive&&onArrive(); return; }
+  const wp=e.path[e.pi];
+  const dd=dist(e.x,e.y,wp.x,wp.y);
+  const step=e.def.speed*dt;
+  if(dd<=step+1){ e.x=wp.x; e.y=wp.y; e.pi++; if(e.pi>=e.path.length){ e.path=null; if(e.goal){e.x=e.goal.x;e.y=e.goal.y;} onArrive&&onArrive(); } }
+  else { e.x+=(wp.x-e.x)/dd*step; e.y+=(wp.y-e.y)/dd*step; e.dir=Math.atan2(wp.y-e.y,wp.x-e.x); }
+}
+
+function doAttack(e,dt){
+  const t=ent(e.target);
+  if(!t||t.dead){ e.target=null; e.engaging=false;
+    if(e.attackMove&&e.goal){ e.state='move'; e.path=findPath(toTile(e.x),toTile(e.y),toTile(e.goal.x),toTile(e.goal.y))||[e.goal]; e.pi=0; }
+    else e.state='idle'; return; }
+  const reach=(e.def.range*TILE)+(t.kind==='building'?t.fp*TILE*0.4:0);
+  const dd=distToEnt(e.x,e.y,t);
+  if(dd>reach){
+    // stance: hold ground -> never chase; defensive -> leash to guard point
+    if(e.stance==='hold'){ e.target=null; e.engaging=false; e.path=null; e.state='idle'; return; }
+    if(e.stance==='defensive' && e.guard && dist(e.x,e.y,e.guard.x,e.guard.y)>LEASH){
+      e.target=null; e.engaging=false; setMove(e,e.guard.x,e.guard.y,false); return; }
+    // approach
+    if(!e._rep||e._rep<=0){ const tt=t.kind==='building'?nearestWalkable(t.tx+ (t.fp>>1),t.ty+t.fp):{x:toTile(t.x),y:toTile(t.y)};
+      const goal=t.kind==='building'?(nearestWalkable(t.tx,t.ty+t.fp)||tt):{x:toTile(t.x),y:toTile(t.y)};
+      e.path=findPath(toTile(e.x),toTile(e.y),goal.x,goal.y); e.pi=0; e._rep=0.5; }
+    e._rep-=dt;
+    stepMove(e,dt,null);
+  } else {
+    e.path=null;
+    if(e.atkTimer<=0){
+      e.atkTimer=e.def.atkCd;
+      if(e.def.ranged){ fxArrow(e.x,e.y-8,t.x,t.y); sfx('arrow'); } else { sfx('melee'); }
+      hurt(t,dmgVs(e,t),e.owner); fxHit(t.x,t.y);
+      e.swing=0.18;
+    }
+    e.dir=Math.atan2(t.y-e.y,t.x-e.x);
+  }
+  if(e.swing>0)e.swing-=dt;
+}
+
+function doGather(e,dt){
+  // walk to resource, harvest, when full -> return
+  if(!e.resTile){ e.state='idle'; return; }
+  const {tx,ty}=e.resTile; const t=at(tx,ty);
+  if(!t || t.amount<=0 || t.type!==e.gatherType){
+    const r=nearestRes(e.gatherType,e.x,e.y);
+    if(r){ assignGather(e,r.tx,r.ty); } else { e.state='idle'; e.gatherType=null; }
+    return;
+  }
+  const adj=distToEnt(e.x,e.y,{kind:'building',tx,ty,fp:1});
+  if(adj>TILE*0.9){
+    if(!e.path){ const a=nearestWalkable(tx,ty); e.path=a?findPath(toTile(e.x),toTile(e.y),a.x,a.y):null; e.pi=0; if(!e.path){e.state='idle';return;} }
+    stepMove(e,dt,null); return;
+  }
+  e.path=null; e.dir=Math.atan2(tileC(ty)-e.y,tileC(tx)-e.x);
+  const take=Math.min(e.def.gatherRate*gatherMult(e.owner)*dt, t.amount, e.def.carryCap-e.carry);
+  e.carry+=take; t.amount-=take;
+  if(t.amount<=0){ t.type='grass'; t.amount=0; markTile(tx,ty); }
+  if(e.carry>=e.def.carryCap){ e.state='return'; e.path=null; }
+}
+function doReturn(e,dt){
+  const dz=nearestDropoff(e.owner,e.x,e.y);
+  if(!dz){ e.state='idle'; return; }
+  const dd=distToEnt(e.x,e.y,dz);
+  if(dd>TILE*0.9){
+    if(!e.path){ const a=nearestWalkable(dz.tx+ (dz.fp>>1),dz.ty+dz.fp)||nearestWalkable(dz.tx,dz.ty);
+      e.path=a?findPath(toTile(e.x),toTile(e.y),a.x,a.y):null; e.pi=0; if(!e.path){e.state='idle';return;} }
+    stepMove(e,dt,null); return;
+  }
+  // deposit
+  const map={berry:'food',forest:'wood',gold:'gold',stone:'stone'};
+  const rk=map[e.gatherType]||'food';
+  res(e.owner)[rk]=(res(e.owner)[rk]||0)+e.carry; e.carry=0;
+  // back to resource
+  if(e.resTile && at(e.resTile.tx,e.resTile.ty).amount>0){ assignGather(e,e.resTile.tx,e.resTile.ty); }
+  else { const r=nearestRes(e.gatherType,e.x,e.y); if(r)assignGather(e,r.tx,r.ty); else e.state='idle'; }
+}
+function doBuild(e,dt){
+  const b=ent(e.target);
+  if(!b||b.dead||b.built){ e.target=null; e.state='idle';
+     if(b&&b.built){ const r=nearestRes('berry',e.x,e.y)||nearestRes('forest',e.x,e.y); if(r&&Math.random()<.5)assignGather(e,r.tx,r.ty);} return; }
+  const dd=distToEnt(e.x,e.y,b);
+  if(dd>TILE*1.0){
+    if(!e.path){ const a=nearestWalkable(b.tx,b.ty+b.fp)||nearestWalkable(b.tx+b.fp,b.ty);
+      e.path=a?findPath(toTile(e.x),toTile(e.y),a.x,a.y):null; e.pi=0; if(!e.path){e.state='idle';return;} }
+    stepMove(e,dt,null); return;
+  }
+  e.path=null;
+  const rate=1/22; // base build time ~ , multiple builders stack
+  b.prog=Math.min(1,b.prog+rate*dt);
+  b.hp=Math.max(b.hp, b.maxhp*(0.08+0.92*b.prog));
+  e.swing=0.2; if(e.swing>0)e.swing-=dt;
+  if(b.prog>=1){ b.built=true; b.hp=b.maxhp; rebuildOccupancy(); refreshFog(true);
+    if(b.owner==='player'){ toast(DEF[b.type].name+' construido.'); sfx('done'); refreshPanel(); } }
+}
+
+// ======================== ENEMY BOT ======================================
+function botThink(dt){
+  const B=S.bot; B.t+=dt;
+  // throttle planning
+  B.plan-=dt; if(B.plan>0)return; B.plan=1.0;
+
+  const conf=DIFF[diffIdx];
+  const tc=S.entities.find(e=>e.owner==='enemy'&&e.type==='towncenter'&&!e.dead);
+  if(!tc)return; // bot lost its TC; it withers
+
+  const vills=S.entities.filter(e=>e.owner==='enemy'&&e.type==='villager'&&!e.dead);
+  const mil=S.entities.filter(e=>e.owner==='enemy'&&e.def.mil&&!e.dead);
+  const r=res('enemy');
+
+  // 1) assign idle villagers to gather (balance wood/gold/food/stone)
+  let woodN=0,goldN=0,foodN=0,stoneN=0;
+  for(const v of vills){ if(v.gatherType==='forest')woodN++; else if(v.gatherType==='gold')goldN++;
+    else if(v.gatherType==='stone')stoneN++; else if(v.gatherType==='berry'||v.state==='build')foodN++; }
+  for(const v of vills){
+    if(v.state==='idle'||(!v.gatherType&&v.state!=='build'&&v.state!=='return')){
+      let want='forest'; if(foodN<=woodN&&foodN<=goldN)want='berry';
+      else if(goldN<woodN&&era('enemy')>=1)want='gold';
+      else if(stoneN<2)want='stone';
+      const rr=nearestRes(want,v.x,v.y)||nearestRes('forest',v.x,v.y)||nearestRes('gold',v.x,v.y)||nearestRes('berry',v.x,v.y)||nearestRes('stone',v.x,v.y);
+      if(rr){ assignGather(v,rr.tx,rr.ty); const wt=at(rr.tx,rr.ty)?at(rr.tx,rr.ty).type:want;
+        if(wt==='forest')woodN++; else if(wt==='gold')goldN++; else if(wt==='stone')stoneN++; else foodN++; }
+    }
+  }
+
+  // 2) train villagers
+  if(vills.length+countQueued('enemy','villager')<conf.botVills && tc.queue.length<2 && tc.ageTimer===0){
+    if(canAfford('enemy',DEF.villager.cost) && popUsed('enemy')<popCap('enemy')){ pay('enemy',DEF.villager.cost); tc.queue.push('villager'); if(tc.queue.length===1)tc.qTimer=DEF.villager.train; }
+  }
+
+  // 3) housing
+  if(popUsed('enemy')+2>=popCap('enemy') && popCap('enemy')<POP_MAX && !B.buildingHouse){
+    botBuild('house'); }
+
+  // 4) military buildings
+  const has=t=>S.entities.some(e=>e.owner==='enemy'&&e.type===t&&!e.dead);
+  if(!has('barracks')&&vills.length>=5) botBuild('barracks');
+  else if(has('barracks')&&!has('archery')&&vills.length>=8) botBuild('archery');
+  else if(has('archery')&&!has('blacksmith')&&vills.length>=10) botBuild('blacksmith');
+
+  // 4b) research at blacksmith (occasional, affordable picks)
+  if(has('blacksmith') && Math.random()<0.5){
+    const order=['melAtk','armor','ranAtk','gather'];
+    for(const key of order){ if(S.upg.enemy[key]>=UPG[key].max)continue;
+      if(canAfford('enemy',UPG[key].cost(S.upg.enemy[key]))){ doResearch('enemy',key); break; } }
+  }
+
+  // 5) age up
+  if(era('enemy')<2 && vills.length>=10 && canAfford('enemy',AGEUP_COST) && tc.queue.length===0 && tc.ageTimer===0){
+    pay('enemy',AGEUP_COST); tc.ageTimer=AGEUP_TIME; }
+
+  // 6) temple in era 2
+  if(era('enemy')>=2 && !has('temple') && canAfford('enemy',DEF.temple.cost)) botBuild('temple');
+
+  // 7) train army
+  const cap=conf.armyCap + (era('enemy')>=2?8:0);
+  if(mil.length+queuedMil('enemy') < cap){
+    // pick a building to train from
+    const opts=[];
+    for(const e of S.entities){ if(e.owner!=='enemy'||e.kind!=='building'||!e.built||!e.def.trains||e.queue.length>=3)continue;
+      for(const u of e.def.trains){ if(u==='villager')continue; if(DEF[u].era&&era('enemy')<DEF[u].era)continue; opts.push({b:e,u}); } }
+    if(opts.length){ const pick=opts[ri(0,opts.length-1)];
+      if(canAfford('enemy',DEF[pick.u].cost)&&popUsed('enemy')<popCap('enemy')){
+        pay('enemy',DEF[pick.u].cost); pick.b.queue.push(pick.u); if(pick.b.queue.length===1)pick.b.qTimer=DEF[pick.u].train; } }
+  }
+
+  // 8) defend: enemy units near our TC -> rally military
+  const threat=S.entities.find(e=>e.owner==='player'&&e.kind==='unit'&&!e.dead&&distToEnt(e.x,e.y,tc)<10*TILE&&e.def.mil);
+  if(threat){ for(const m of mil){ if(distToEnt(m.x,m.y,tc)<16*TILE){ m.target=threat.id; m.state='attack'; m.attackMove=false; } } B.attacking=false; return; }
+
+  // 9) attack waves
+  const ptc=S.entities.find(e=>e.owner==='player'&&e.type==='towncenter'&&!e.dead)
+           || S.entities.find(e=>e.owner==='player'&&e.kind==='building'&&!e.dead);
+  if(!B.attacking && S.time>conf.firstAttack*0 + B.nextAttackAt && mil.length>=B.waveSize && ptc){
+    B.attacking=true;
+    for(const m of mil) setMove(m,ptc.x+rnd(-TILE,TILE),ptc.y+rnd(-TILE,TILE),true);
+    toast('¡El enemigo lanza una oleada!');
+  }
+  if(B.attacking){
+    const stillFighting=mil.some(m=>distToEnt(m.x,m.y,(ptc||tc))<8*TILE);
+    if(mil.length===0 || (!ptc)) { B.attacking=false; }
+    if(!stillFighting && mil.length>0 && S.time>B.nextAttackAt+12){ /* keep marching */ 
+      if(ptc) for(const m of mil) if(m.state==='idle') setMove(m,ptc.x,ptc.y,true); }
+    if(mil.length<Math.max(2,B.waveSize*0.35)){ // wave spent -> regroup
+      B.attacking=false; B.waveSize=Math.min(60,B.waveSize+conf.waveGrow); B.nextAttackAt=S.time+35;
+      // pull survivors home
+      for(const m of mil) setMove(m,tc.x+rnd(-2*TILE,2*TILE),tc.y+2*TILE,false);
+    }
+  }
+}
+function countQueued(owner,type){ let n=0; for(const e of S.entities) if(e.owner===owner&&e.queue) n+=e.queue.filter(q=>q===type).length; return n; }
+function queuedMil(owner){ let n=0; for(const e of S.entities) if(e.owner===owner&&e.queue) n+=e.queue.filter(q=>DEF[q].mil).length; return n; }
+function botBuild(type){
+  const def=DEF[type]; if(!canAfford('enemy',def.cost))return;
+  const tc=S.entities.find(e=>e.owner==='enemy'&&e.type==='towncenter'); if(!tc)return;
+  // find spot near TC
+  for(let tries=0;tries<40;tries++){
+    const ang=rnd(0,Math.PI*2), rad=rnd(3,8)*TILE;
+    let tx=toTile(tc.x+Math.cos(ang)*rad), ty=toTile(tc.y+Math.sin(ang)*rad);
+    tx=clamp(tx,1,MAP_W-def.fp-1); ty=clamp(ty,1,MAP_H-def.fp-1);
+    if(footFree(tx,ty,def.fp)){
+      pay('enemy',def.cost);
+      const b=placeBuildingFoundation(type,'enemy',tx,ty,null);
+      // assign 2 idle-ish villagers
+      const vs=S.entities.filter(e=>e.owner==='enemy'&&e.type==='villager'&&!e.dead)
+        .sort((a,c)=>distToEnt(a.x,a.y,b)-distToEnt(c.x,c.y,b)).slice(0,2);
+      for(const v of vs){ v.target=b.id; v.state='build'; v.path=null; }
+      if(type==='house')S.bot.buildingHouse=b.id;
+      return;
+    }
+  }
+}
+function footFree(tx,ty,fp){
+  for(let y=ty;y<ty+fp;y++)for(let x=tx;x<tx+fp;x++){
+    if(!tileWalkable(x,y)) { const t=at(x,y); if(!t||t.type==='water'||t.type==='forest'||t.type==='gold'||t.type==='berry'||t.type==='stone'||(S.occ&&S.occ[y*MAP_W+x]))return false; }
+  } return true;
+}
+
+// ======================== WIN / LOSE ====================================
+function checkEnd(){
+  const pTC=S.entities.some(e=>e.owner==='player'&&e.type==='towncenter'&&!e.dead);
+  const eTC=S.entities.some(e=>e.owner==='enemy'&&e.type==='towncenter'&&!e.dead);
+  if(!eTC){ endGame(true,'Conquista','Arrasaste el Centro enemigo. El reino es tuyo.'); return; }
+  if(!pTC){ endGame(false,'Derrota','Tu Centro cayó. El enemigo domina estas tierras.'); return; }
+  if(S.templeHold){
+    if(S.templeHold.player>=TEMPLE_WIN){ endGame(true,'Dominio del Templo','Mantuviste el Templo Sagrado el tiempo suficiente. Los dioses te coronan.'); return; }
+    if(S.templeHold.enemy>=TEMPLE_WIN){ endGame(false,'Templo perdido','El enemigo dominó el Templo Sagrado demasiado tiempo.'); return; }
+  }
+}
+function endGame(win,title,body){
+  if(S.over)return; S.over=true; S.running=false;
+  sfx(win?'win':'lose');
+  const ov=document.getElementById('end');
+  document.getElementById('end-title').textContent=win?'Victoria':'Derrota';
+  document.getElementById('end-title').className=win?'':'lose';
+  document.getElementById('end-tag').textContent=title+' · '+DIFF[diffIdx].name;
+  document.getElementById('end-body').textContent=body;
+  ov.classList.remove('hide');
+}
+
+// ============================ FOG ========================================
+function refreshFog(force){
+  if(!S.fog){ S.fog={ vis:new Uint8Array(MAP_W*MAP_H), exp:new Uint8Array(MAP_W*MAP_H) }; }
+  const vis=S.fog.vis; vis.fill(0);
+  for(const e of S.entities){ if(e.owner!=='player'||e.dead)continue;
+    const cx=toTile(e.x), cy=toTile(e.y), R=(e.def.vision||4);
+    for(let y=cy-R;y<=cy+R;y++)for(let x=cx-R;x<=cx+R;x++){
+      if(x<0||y<0||x>=MAP_W||y>=MAP_H)continue;
+      if(dist(x,y,cx,cy)<=R){ vis[y*MAP_W+x]=1; S.fog.exp[y*MAP_W+x]=1; }
+    }
+  }
+}
+const isVisible=(tx,ty)=> S.fog && S.fog.vis[ty*MAP_W+tx];
+const isExplored=(tx,ty)=> S.fog && S.fog.exp[ty*MAP_W+tx];
+
+// ============================ RENDER =====================================
+function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,VIEW_W,VIEW_H);
+  if(!S){ return; }
+  const cam=S.cam;
+  ctx.save();
+  ctx.translate(-cam.x*cam.z, -cam.y*cam.z); ctx.scale(cam.z,cam.z);
+
+  // visible tile range
+  const x0=Math.max(0,toTile(cam.x)-1), y0=Math.max(0,toTile(cam.y)-1);
+  const x1=Math.min(MAP_W-1, toTile(cam.x+VIEW_W/cam.z)+1);
+  const y1=Math.min(MAP_H-1, toTile(cam.y+VIEW_H/cam.z)+1);
+
+  // terrain (single blit from offscreen cache)
+  if(terrainCv){ ctx.imageSmoothingEnabled=false; ctx.drawImage(terrainCv,0,0); }
+  // entities (only on explored; enemies only if visible)
+  const drawList=[];
+  for(const e of S.entities){
+    const tx=toTile(e.x),ty=toTile(e.y);
+    if(e.kind==='building'){ if(!isExplored(e.tx,e.ty)&&!isExplored(e.tx+e.fp-1,e.ty+e.fp-1))continue; }
+    else { if(!isVisible(tx,ty)){ if(e.owner!=='player')continue; } }
+    if(e.owner==='enemy'&&e.kind==='unit'&&!isVisible(tx,ty))continue;
+    drawList.push(e);
+  }
+  drawList.sort((a,b)=>a.y-b.y);
+  for(const e of drawList){ if(e.kind==='building')drawBuilding(e); else drawUnit(e); }
+
+  // selection ring + rally
+  for(const id of S.sel){ const e=ent(id); if(!e)continue; drawSelect(e); }
+
+  // placement ghost
+  if(S.place) drawGhost();
+
+  // fog overlay (dim explored-not-visible, black unexplored)
+  drawFog(x0,y0,x1,y1);
+
+  // box-select rect
+  if(S.box){ ctx.strokeStyle='rgba(255,214,110,.9)'; ctx.fillStyle='rgba(255,214,110,.12)';
+    const a=screenToWorld(S.box.x0,S.box.y0), b=screenToWorld(S.box.x1,S.box.y1);
+    const rx=Math.min(a.x,b.x),ry=Math.min(a.y,b.y),rw=Math.abs(a.x-b.x),rh=Math.abs(a.y-b.y);
+    ctx.lineWidth=2/cam.z; ctx.fillRect(rx,ry,rw,rh); ctx.strokeRect(rx,ry,rw,rh); }
+
+  // FX
+  drawFX();
+
+  ctx.restore();
+  drawMinimap();
+}
+
+function buildTerrain(){
+  if(!terrainCv){ terrainCv=document.createElement('canvas'); terrainCv.width=WORLD_W; terrainCv.height=WORLD_H; tctx=terrainCv.getContext('2d'); }
+  for(let ty=0;ty<MAP_H;ty++)for(let tx=0;tx<MAP_W;tx++) paintTile(tctx,tx,ty);
+}
+function markTile(tx,ty){ if(tctx)paintTile(tctx,tx,ty); }
+// deterministic per-tile hash (so single-tile repaints match the cache)
+function tHash(tx,ty,k){ let n=(tx*374761393)+(ty*668265263)+(k||0)*2147483647;
+  n=(n^(n>>13))*1274126177; n=(n^(n>>16))>>>0; return n/4294967296; }
+function polyPath(c,pts){ c.beginPath(); c.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++)c.lineTo(pts[i][0],pts[i][1]); c.closePath(); }
+function paintTile(c,tx,ty){
+  const t=at(tx,ty); const px=tx*TILE, py=ty*TILE;
+  let base = COLORS.grass;
+  if(t.type==='water'){ base=COLORS.water; }
+  else if(t.type==='forest'){ base='#4f6a3d'; }
+  else if(t.v) base=COLORS.grass2;
+  c.fillStyle=base; c.fillRect(px,py,TILE,TILE);
+
+  // deterministic ground texture; still compatible with the offscreen terrain cache
+  if(t.type==='grass'||t.type==='forest'||t.type==='berry'||t.type==='gold'||t.type==='stone'){
+    c.fillStyle='rgba(255,255,255,0.035)'; c.fillRect(px,py,TILE,TILE*0.5);
+    for(let i=0;i<4;i++){ const rx=tHash(tx,ty,i*7+1), ry=tHash(tx,ty,i*7+2);
+      c.fillStyle = (i&1)?'rgba(255,255,255,.045)':'rgba(0,0,0,.055)';
+      c.fillRect(px+rx*(TILE-4)+2, py+ry*(TILE-4)+2, 1.7, 1.7); }
+  }
+  c.fillStyle='rgba(0,0,0,0.05)'; c.fillRect(px,py+TILE-2,TILE,2); c.fillRect(px+TILE-2,py,2,TILE);
+  if((tx+ty)&1){ c.fillStyle='rgba(0,0,0,0.025)'; c.fillRect(px,py,TILE,TILE); }
+
+  if(t.type==='forest'){
+    // readable wood/forest: trunks + leafy canopies, not just a green blob
+    c.fillStyle='rgba(0,0,0,.24)'; c.beginPath(); c.ellipse(px+TILE*0.52,py+TILE*0.72,TILE*0.38,TILE*0.16,0,0,7); c.fill();
+    const trees=[
+      {x:.36,y:.46,s:.74},{x:.57,y:.42,s:.84},{x:.48,y:.58,s:.66}
+    ];
+    for(let i=0;i<trees.length;i++){
+      const tr=trees[i], x=px+TILE*tr.x, y=py+TILE*tr.y, r=TILE*0.18*tr.s;
+      c.fillStyle='#5b351d'; c.fillRect(x-r*0.22,y+r*0.42,r*0.44,r*1.15);
+      c.strokeStyle='rgba(45,25,12,.45)'; c.lineWidth=0.8; c.beginPath(); c.moveTo(x,y+r*0.45); c.lineTo(x,y+r*1.38); c.stroke();
+      c.fillStyle='#213f29'; c.beginPath(); c.arc(x+r*0.05,y+r*0.18,r*1.18,0,7); c.fill();
+      c.fillStyle='#3f7247'; c.beginPath(); c.arc(x-r*0.28,y-r*0.02,r*0.88,0,7); c.fill();
+      c.fillStyle='#5d8f55'; c.beginPath(); c.arc(x+r*0.24,y-r*0.12,r*0.58,0,7); c.fill();
+      c.fillStyle='rgba(255,255,255,.10)'; c.beginPath(); c.arc(x-r*0.48,y-r*0.28,r*0.18,0,7); c.fill();
+    }
+    // small log pile clue for wood
+    c.strokeStyle='#7a4c24'; c.lineWidth=3; c.lineCap='round';
+    c.beginPath(); c.moveTo(px+TILE*.18,py+TILE*.78); c.lineTo(px+TILE*.39,py+TILE*.72); c.stroke();
+    c.strokeStyle='#b98247'; c.lineWidth=1.3; c.beginPath(); c.moveTo(px+TILE*.18,py+TILE*.78); c.lineTo(px+TILE*.39,py+TILE*.72); c.stroke(); c.lineCap='butt';
+  } else if(t.type==='gold'){
+    // gold deposit: angular mine rock with clear metallic veins/crystals
+    c.fillStyle='rgba(0,0,0,.26)'; c.beginPath(); c.ellipse(px+TILE*0.51,py+TILE*0.68,TILE*0.38,TILE*0.18,0,0,7); c.fill();
+    polyPath(c,[[px+8,py+22],[px+13,py+12],[px+24,py+10],[px+30,py+19],[px+25,py+27],[px+13,py+28]]); c.fillStyle='#5b5566'; c.fill();
+    polyPath(c,[[px+12,py+22],[px+16,py+14],[px+24,py+13],[px+27,py+19],[px+22,py+25]]); c.fillStyle='#81798d'; c.fill();
+    c.strokeStyle='#ffd66e'; c.lineWidth=2.2; c.lineCap='round';
+    c.beginPath(); c.moveTo(px+13,py+20); c.lineTo(px+19,py+16); c.lineTo(px+26,py+17); c.stroke();
+    c.beginPath(); c.moveTo(px+17,py+24); c.lineTo(px+22,py+20); c.lineTo(px+27,py+22); c.stroke();
+    c.lineCap='butt';
+    for(let i=0;i<3;i++){ const gx=px+TILE*(0.39+0.15*i), gy=py+TILE*(0.38+0.10*(i%2));
+      polyPath(c,[[gx,gy-5],[gx+4,gy-1],[gx+2,gy+6],[gx-3,gy+6],[gx-5,gy-1]]);
+      c.fillStyle=i%2?'#ffcf4e':'#e8b23a'; c.fill();
+      c.strokeStyle='rgba(70,40,0,.45)'; c.lineWidth=.7; c.stroke();
+    }
+    c.fillStyle='rgba(255,255,255,.75)'; c.beginPath(); c.arc(px+18,py+15,1.5,0,7); c.fill();
+  } else if(t.type==='berry'){
+    // food deposit: clear berry bush with leaf silhouettes and fruit clusters
+    c.fillStyle='rgba(0,0,0,.22)'; c.beginPath(); c.ellipse(px+TILE*0.5,py+TILE*0.69,TILE*0.34,TILE*0.15,0,0,7); c.fill();
+    const leaves=[[.34,.53,.17],[.49,.46,.22],[.64,.54,.18],[.45,.62,.17],[.58,.63,.15]];
+    for(const [lx,ly,lr] of leaves){ c.fillStyle=ly<.55?'#356b3f':'#284e30'; c.beginPath(); c.ellipse(px+TILE*lx,py+TILE*ly,TILE*lr,TILE*lr*.72,0.35,0,7); c.fill(); }
+    c.strokeStyle='rgba(21,45,24,.75)'; c.lineWidth=1; c.beginPath(); c.moveTo(px+TILE*.32,py+TILE*.66); c.lineTo(px+TILE*.67,py+TILE*.42); c.stroke();
+    for(let i=0;i<8;i++){ const rx=tHash(tx,ty,40+i), ry=tHash(tx,ty,70+i);
+      const bx=px+TILE*(0.34+rx*0.34), by=py+TILE*(0.40+ry*0.28);
+      c.fillStyle=i%2?'#e45b6e':'#b53552'; c.beginPath(); c.arc(bx,by,2.4,0,7); c.fill();
+      c.fillStyle='rgba(255,255,255,.42)'; c.beginPath(); c.arc(bx-.8,by-.8,.75,0,7); c.fill();
+    }
+  } else if(t.type==='stone'){
+    // stone deposit: faceted blocks/boulders instead of soft grey circles
+    c.fillStyle='rgba(0,0,0,.24)'; c.beginPath(); c.ellipse(px+TILE*0.52,py+TILE*0.69,TILE*0.39,TILE*0.18,0,0,7); c.fill();
+    const rocks=[
+      [[.23,.62],[.31,.43],[.47,.39],[.55,.56],[.47,.72],[.31,.75]],
+      [[.44,.59],[.52,.37],[.69,.40],[.80,.58],[.70,.75],[.53,.72]],
+      [[.34,.72],[.43,.55],[.58,.55],[.66,.70],[.57,.83],[.40,.82]]
+    ];
+    const fills=['#696274','#8f8799','#5d5867'];
+    for(let i=0;i<rocks.length;i++){
+      const pts=rocks[i].map(([x,y])=>[px+TILE*x,py+TILE*y]);
+      polyPath(c,pts); c.fillStyle=fills[i]; c.fill(); c.strokeStyle='rgba(30,25,38,.55)'; c.lineWidth=1; c.stroke();
+      polyPath(c,pts.slice(0,4)); c.fillStyle='rgba(255,255,255,.12)'; c.fill();
+    }
+    c.strokeStyle='rgba(255,255,255,.16)'; c.lineWidth=1.1; c.beginPath(); c.moveTo(px+14,py+17); c.lineTo(px+20,py+23); c.lineTo(px+25,py+17); c.stroke();
+  } else if(t.type==='water'){
+    c.fillStyle='rgba(0,0,0,.18)'; c.fillRect(px,py+TILE*0.62,TILE,TILE*0.38);
+    c.fillStyle='rgba(120,200,225,.10)'; c.fillRect(px,py,TILE,TILE*0.4);
+    c.strokeStyle='rgba(255,255,255,.12)'; c.lineWidth=1.2;
+    c.beginPath(); c.moveTo(px+5,py+TILE*0.5); c.bezierCurveTo(px+12,py+TILE*.42,px+20,py+TILE*.58,px+TILE-5,py+TILE*0.5); c.stroke();
+    c.strokeStyle='rgba(255,255,255,.07)';
+    c.beginPath(); c.moveTo(px+8,py+TILE*0.72); c.bezierCurveTo(px+15,py+TILE*.64,px+22,py+TILE*.78,px+TILE-8,py+TILE*.72); c.stroke();
+  }
+}
+
+function ownerColor(e){ return e.owner==='player'?COLORS.player:e.owner==='enemy'?COLORS.enemy:COLORS.neutral; }
+function ownerDk(e){ return e.owner==='player'?COLORS.playerDk:e.owner==='enemy'?COLORS.enemyDk:'#6a6f82'; }
+
+function drawBuilding(e){
+  const r=footprintRect(e); const col=ownerColor(e), dk=ownerDk(e);
+  // drop shadow (soft, offset)
+  ctx.fillStyle='rgba(0,0,0,.32)';
+  roundRectPath(ctx, r.x+3, r.y+6, r.w, r.h, 4); ctx.fill();
+  // foundation under construction
+  if(!e.built){ ctx.fillStyle='rgba(110,110,132,.55)'; roundRectPath(ctx,r.x,r.y,r.w,r.h,4); ctx.fill();
+    ctx.save(); roundRectPath(ctx,r.x,r.y,r.w,r.h,4); ctx.clip();
+    ctx.fillStyle=col; ctx.globalAlpha=0.4+0.45*e.prog; ctx.fillRect(r.x,r.y+r.h*(1-e.prog),r.w,r.h*e.prog); ctx.restore();
+    ctx.globalAlpha=1; ctx.strokeStyle='rgba(255,214,110,.7)'; ctx.setLineDash([5,3]); ctx.lineWidth=1.4;
+    roundRectPath(ctx,r.x+1,r.y+1,r.w-2,r.h-2,4); ctx.stroke(); ctx.setLineDash([]);
+  } else {
+    // body with bronze rim + inner panel + top light
+    ctx.fillStyle=dk; roundRectPath(ctx,r.x,r.y,r.w,r.h,4); ctx.fill();
+    ctx.strokeStyle='rgba(184,134,58,.55)'; ctx.lineWidth=1.4; roundRectPath(ctx,r.x+0.7,r.y+0.7,r.w-1.4,r.h-1.4,4); ctx.stroke();
+    ctx.fillStyle=col; roundRectPath(ctx,r.x+3,r.y+3,r.w-6,r.h-6,3); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.12)'; ctx.fillRect(r.x+3,r.y+3,r.w-6,(r.h-6)*0.34); // top sheen
+    drawBuildingIcon(e,r,col,dk);
+    // team banner (skip neutral sacred)
+    if(e.owner!=='neutral'){ const bx=r.x+r.w-6, by=r.y-3;
+      ctx.fillStyle=dk; ctx.fillRect(bx,by,3,12);
+      ctx.fillStyle=col; ctx.beginPath(); ctx.moveTo(bx+3,by); ctx.lineTo(bx+11,by+2.5); ctx.lineTo(bx+3,by+5); ctx.closePath(); ctx.fill(); }
+  }
+  // control tint for sacred
+  if(e.type==='sacred'){ const c=e.ctrl==='player'?COLORS.player:e.ctrl==='enemy'?COLORS.enemy:'#cfd2dd';
+    ctx.strokeStyle=c; ctx.lineWidth=3; roundRectPath(ctx,r.x+1.5,r.y+1.5,r.w-3,r.h-3,4); ctx.stroke();
+    // soft glow when contested
+    if(e.ctrl&&e.ctrl!=='neutral'){ ctx.save(); ctx.globalAlpha=0.25+0.15*Math.sin(S.time*4);
+      ctx.strokeStyle=c; ctx.lineWidth=6; roundRectPath(ctx,r.x,r.y,r.w,r.h,4); ctx.stroke(); ctx.restore(); } }
+  hpBar(e, r.x, r.y-8, r.w);
+  // training/age progress
+  if(e.built){
+    if(e.ageTimer>0){ progArc(e.x,e.y,1-(e.ageTimer/AGEUP_TIME),'#ffd66e'); }
+    else if(e.queue&&e.queue.length){ const tt=DEF[e.queue[0]].train; progArc(e.x,e.y,1-(e.qTimer/tt),'#ffd66e'); }
+  }
+  // rally flag
+  if(e.rally && S.sel.includes(e.id)){ ctx.strokeStyle='rgba(255,236,176,.7)'; ctx.lineWidth=1.5; ctx.setLineDash([4,3]); ctx.beginPath();
+    ctx.moveTo(e.x,e.y); ctx.lineTo(e.rally.x,e.rally.y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='#ffe9b0'; ctx.beginPath(); ctx.arc(e.rally.x,e.rally.y,3.5,0,7); ctx.fill();
+    ctx.fillStyle=dk; ctx.beginPath(); ctx.arc(e.rally.x,e.rally.y,1.6,0,7); ctx.fill(); }
+}
+function drawBuildingIcon(e,r,col,dk){
+  const cx=r.x+r.w/2, cy=r.y+r.h/2; ctx.save();
+  ctx.fillStyle='rgba(0,0,0,.35)';
+  switch(e.type){
+    case 'towncenter':
+      ctx.fillStyle='#efe6cf'; ctx.fillRect(r.x+r.w*0.28,r.y+r.h*0.22,r.w*0.44,r.h*0.5);
+      ctx.fillStyle=dk; ctx.beginPath(); ctx.moveTo(r.x+r.w*0.22,r.y+r.h*0.28); ctx.lineTo(cx,r.y+r.h*0.06); ctx.lineTo(r.x+r.w*0.78,r.y+r.h*0.28); ctx.fill();
+      ctx.fillStyle='#caa23e'; ctx.fillRect(cx-2,r.y+r.h*0.02,4,r.h*0.1); break;
+    case 'house':
+      ctx.fillStyle='#efe6cf'; ctx.fillRect(r.x+r.w*0.3,cy-2,r.w*0.4,r.h*0.3);
+      ctx.fillStyle=dk; ctx.beginPath(); ctx.moveTo(r.x+r.w*0.26,cy); ctx.lineTo(cx,r.y+r.h*0.22); ctx.lineTo(r.x+r.w*0.74,cy); ctx.fill(); break;
+    case 'farm':
+      ctx.fillStyle='#9c7a3c'; for(let i=0;i<3;i++){ ctx.fillRect(r.x+4,r.y+6+i*(r.h-10)/3,r.w-8,3); }
+      ctx.fillStyle='#d8b85a'; ctx.fillRect(r.x+5,r.y+5,r.w-10,r.h-10); ctx.globalAlpha=.4; ctx.fillStyle='#7c5a1e';
+      for(let i=0;i<3;i++)ctx.fillRect(r.x+5,r.y+5+i*(r.h-10)/3+ (r.h-10)/6,r.w-10,2); ctx.globalAlpha=1; break;
+    case 'barracks':
+      ctx.fillStyle='#cfc6ac'; ctx.fillRect(r.x+5,cy-3,r.w-10,r.h*0.32);
+      ctx.strokeStyle=dk; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx-6,cy+6); ctx.lineTo(cx+6,cy-6); ctx.moveTo(cx-6,cy-6); ctx.lineTo(cx+6,cy+6); ctx.stroke(); break;
+    case 'archery':
+      ctx.strokeStyle='#efe6cf'; ctx.lineWidth=2.4; ctx.beginPath(); ctx.arc(cx-3,cy,8,-1.1,1.1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx-9,cy); ctx.lineTo(cx+9,cy); ctx.stroke(); break;
+    case 'blacksmith':
+      // anvil
+      ctx.fillStyle='#3a3550'; ctx.fillRect(cx-r.w*0.22,cy+r.h*0.04,r.w*0.44,r.h*0.16);
+      ctx.fillStyle='#b9b2c2'; ctx.beginPath();
+      ctx.moveTo(cx-r.w*0.24,cy-r.h*0.06); ctx.lineTo(cx+r.w*0.24,cy-r.h*0.06);
+      ctx.lineTo(cx+r.w*0.12,cy+r.h*0.04); ctx.lineTo(cx-r.w*0.12,cy+r.h*0.04); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#ffcf6e'; ctx.fillRect(cx-2,cy-r.h*0.2,4,r.h*0.14); break;
+    case 'temple':
+      ctx.fillStyle='#f3ead0'; for(let i=0;i<4;i++)ctx.fillRect(r.x+r.w*0.24+i*r.w*0.16, r.y+r.h*0.34, r.w*0.06, r.h*0.4);
+      ctx.fillStyle=dk; ctx.fillRect(r.x+r.w*0.18,r.y+r.h*0.24,r.w*0.64,r.h*0.1);
+      ctx.fillStyle='#ffd66e'; ctx.beginPath(); ctx.arc(cx,r.y+r.h*0.18,4,0,7); ctx.fill(); break;
+    case 'tower':
+      ctx.fillStyle='#cfc6ac'; ctx.fillRect(cx-r.w*0.18,r.y+r.h*0.2,r.w*0.36,r.h*0.6);
+      ctx.fillStyle=dk; for(let i=0;i<3;i++)ctx.fillRect(cx-r.w*0.18+i*r.w*0.14,r.y+r.h*0.14,r.w*0.08,r.h*0.1); break;
+    case 'sacred':
+      ctx.fillStyle='#e9e0c8'; for(let i=0;i<4;i++)ctx.fillRect(r.x+r.w*0.22+i*r.w*0.17,r.y+r.h*0.3,r.w*0.07,r.h*0.45);
+      ctx.fillStyle='#7fd0ff'; ctx.beginPath(); ctx.arc(cx,r.y+r.h*0.16,5,0,7); ctx.fill(); break;
+  }
+  ctx.restore();
+}
+
+// rounded-rect path (cross-browser)
+function roundRectPath(c,x,y,w,h,r){ r=Math.min(r,h/2,w/2); c.beginPath();
+  c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+// shaded team-colored bead (translate already applied)
+function unitBead(col,dk,rad){
+  ctx.fillStyle=dk; ctx.beginPath(); ctx.arc(0,0,rad+1.2,0,7); ctx.fill();
+  ctx.fillStyle=col; ctx.beginPath(); ctx.arc(0,0,rad,0,7); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.22)'; ctx.beginPath(); ctx.arc(-rad*0.3,-rad*0.34,rad*0.5,0,7); ctx.fill();
+}
+function drawVillagerCarry(e,R){
+  if(!(e.carry>0))return;
+  const type=e.gatherType||'berry';
+  ctx.save(); ctx.translate(R*0.58,-R*0.70); ctx.rotate(-0.18);
+  if(type==='forest'){
+    // bundle of logs on the shoulder/back
+    ctx.lineCap='round';
+    for(let i=0;i<3;i++){
+      ctx.strokeStyle=i===1?'#b47a3e':'#7a4b24'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(-R*.35,-R*.12+i*3); ctx.lineTo(R*.62,-R*.22+i*3); ctx.stroke();
+      ctx.fillStyle='#d2a169'; ctx.beginPath(); ctx.arc(R*.62,-R*.22+i*3,1.45,0,7); ctx.fill();
+    }
+    ctx.lineCap='butt';
+  } else if(type==='gold'){
+    ctx.fillStyle='#5d4530'; roundRectPath(ctx,-R*.26,-R*.20,R*.72,R*.58,3); ctx.fill();
+    ctx.fillStyle='#ffd66e';
+    for(let i=0;i<4;i++){ ctx.beginPath(); ctx.arc(-R*.12+i*R*.17,-R*.02+(i%2)*2,1.7,0,7); ctx.fill(); }
+    ctx.strokeStyle='rgba(70,40,0,.55)'; ctx.lineWidth=0.9; roundRectPath(ctx,-R*.26,-R*.20,R*.72,R*.58,3); ctx.stroke();
+  } else if(type==='stone'){
+    ctx.fillStyle='#3d3748'; roundRectPath(ctx,-R*.28,-R*.18,R*.78,R*.56,3); ctx.fill();
+    for(let i=0;i<3;i++){ ctx.fillStyle=i%2?'#9a93a6':'#6f687b';
+      ctx.beginPath(); ctx.arc(-R*.06+i*R*.20,-R*.02+(i%2)*2,2.1,0,7); ctx.fill(); }
+  } else {
+    ctx.fillStyle='#8a5a2b'; roundRectPath(ctx,-R*.28,-R*.14,R*.72,R*.54,3); ctx.fill();
+    ctx.strokeStyle='#d7a55a'; ctx.lineWidth=1.3; ctx.beginPath(); ctx.arc(R*.05,-R*.12,R*.25,Math.PI,0); ctx.stroke();
+    for(let i=0;i<5;i++){ ctx.fillStyle=i%2?'#e45b6e':'#b53552'; ctx.beginPath(); ctx.arc(-R*.13+i*R*.13,R*.04+(i%2)*1.8,1.7,0,7); ctx.fill(); }
+  }
+  ctx.restore();
+}
+function drawVillagerTool(e,R){
+  const gt=e.gatherType;
+  const showBuild=e.state==='build';
+  if(!showBuild && !gt && !(e.state==='gather'))return;
+  ctx.save(); ctx.translate(R*0.55,-R*0.18); ctx.rotate(0.35);
+  ctx.lineCap='round';
+  if(showBuild){
+    // hammer
+    ctx.strokeStyle='#6c4526'; ctx.lineWidth=1.7; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(R*.48,R*.55); ctx.stroke();
+    ctx.fillStyle='#b9b2c2'; roundRectPath(ctx,-R*.08,-R*.14,R*.48,R*.16,2); ctx.fill();
+  } else if(gt==='forest'){
+    // axe
+    ctx.strokeStyle='#6c4526'; ctx.lineWidth=1.8; ctx.beginPath(); ctx.moveTo(0,-R*.05); ctx.lineTo(R*.52,R*.58); ctx.stroke();
+    ctx.fillStyle='#c7c1cd'; ctx.beginPath(); ctx.moveTo(R*.05,-R*.12); ctx.lineTo(R*.35,-R*.22); ctx.lineTo(R*.34,R*.08); ctx.lineTo(R*.10,R*.08); ctx.closePath(); ctx.fill();
+  } else if(gt==='gold'||gt==='stone'){
+    // pickaxe
+    ctx.strokeStyle='#6c4526'; ctx.lineWidth=1.7; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(R*.48,R*.58); ctx.stroke();
+    ctx.strokeStyle='#c7c1cd'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(-R*.08,-R*.16); ctx.lineTo(R*.38,-R*.16); ctx.stroke();
+  } else if(gt==='berry'){
+    // tiny harvesting basket
+    ctx.fillStyle='#8a5a2b'; roundRectPath(ctx,0,-R*.05,R*.48,R*.34,3); ctx.fill();
+    ctx.strokeStyle='#d7a55a'; ctx.lineWidth=1.1; ctx.beginPath(); ctx.arc(R*.24,-R*.05,R*.18,Math.PI,0); ctx.stroke();
+  }
+  ctx.lineCap='butt'; ctx.restore();
+}
+function drawVillager(e,col,dk,R){
+  const dir=e.dir==null?0:e.dir+Math.PI/2; // local forward is up, rotate toward movement
+  const walk=(e.state==='move'||e.state==='gather'||e.state==='return'||e.state==='build')?Math.sin(e.anim*10):0;
+  ctx.save(); ctx.rotate(dir);
+  // carried resource goes behind the body so it reads like a real bundle/sack
+  drawVillagerCarry(e,R);
+
+  // legs / boots
+  ctx.lineCap='round';
+  ctx.strokeStyle='#24170f'; ctx.lineWidth=2.8;
+  ctx.beginPath(); ctx.moveTo(-R*.24,R*.30); ctx.lineTo(-R*.38,R*.72+walk*1.8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(R*.24,R*.30); ctx.lineTo(R*.38,R*.72-walk*1.8); ctx.stroke();
+  ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(-R*.42,R*.76+walk*1.8); ctx.lineTo(-R*.24,R*.76+walk*1.8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(R*.24,R*.76-walk*1.8); ctx.lineTo(R*.45,R*.76-walk*1.8); ctx.stroke();
+
+  // arms first, then torso on top
+  ctx.strokeStyle='#c99b73'; ctx.lineWidth=2.4;
+  ctx.beginPath(); ctx.moveTo(-R*.52,-R*.30); ctx.lineTo(-R*.78,R*.12-walk*.8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(R*.52,-R*.30); ctx.lineTo(R*.78,R*.10+walk*.8); ctx.stroke();
+
+  // tunic / torso, using owner color but with human silhouette instead of sphere
+  ctx.fillStyle=dk; roundRectPath(ctx,-R*.58,-R*.55,R*1.16,R*1.05,4); ctx.fill();
+  ctx.fillStyle=col; roundRectPath(ctx,-R*.46,-R*.47,R*.92,R*.86,4); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.20)'; roundRectPath(ctx,-R*.42,-R*.43,R*.84,R*.28,3); ctx.fill();
+  ctx.fillStyle='#5a391e'; ctx.fillRect(-R*.46,R*.05,R*.92,2.2);
+  ctx.fillStyle='#f0d0a4'; ctx.beginPath(); ctx.arc(0,-R*.88,R*.34,0,7); ctx.fill();
+  ctx.fillStyle='#3a2e12'; ctx.beginPath(); ctx.arc(0,-R*.99,R*.30,Math.PI,0); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,.23)'; ctx.fillRect(-R*.11,-R*.78,R*.22,R*.08);
+  ctx.fillStyle='rgba(255,255,255,.34)'; ctx.beginPath(); ctx.arc(-R*.12,-R*.98,R*.07,0,7); ctx.fill();
+
+  drawVillagerTool(e,R);
+  ctx.lineCap='butt';
+  ctx.restore();
+}
+function drawUnit(e){
+  const col=ownerColor(e), dk=ownerDk(e), R=e.r;
+  // ground shadow
+  ctx.fillStyle='rgba(0,0,0,.32)'; ctx.beginPath(); ctx.ellipse(e.x,e.y+R*0.75,R*0.95,R*0.42,0,0,7); ctx.fill();
+  const sw=e.swing>0?Math.sin((1-(e.swing/0.2))*Math.PI)*3:0;
+  const bob = e.state==='move' ? Math.sin(e.anim*9)*1.1 : 0;
+  ctx.save(); ctx.translate(e.x + (e.dir!=null?Math.cos(e.dir)*sw:0), e.y - bob);
+  if(e.type==='villager'){
+    drawVillager(e,col,dk,R);
+  } else if(e.type==='archer'){
+    unitBead(col,dk,R);
+    ctx.strokeStyle='#efe6cf'; ctx.lineWidth=1.8; ctx.beginPath(); ctx.arc(R*0.25,0,R*0.95,-1,1); ctx.stroke();
+    ctx.strokeStyle='rgba(0,0,0,.45)'; ctx.lineWidth=0.8; ctx.beginPath(); ctx.moveTo(R*0.25,-R*0.8); ctx.lineTo(R*0.25,R*0.8); ctx.stroke();
+  } else if(e.type==='spearman'){
+    unitBead(col,dk,R);
+    ctx.strokeStyle='#cfc8b2'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(-R*0.9,-R*0.9); ctx.lineTo(R*1.3,R*1.3); ctx.stroke();
+    ctx.fillStyle='#e9e2cc'; ctx.beginPath(); ctx.moveTo(R*1.32,R*1.32); ctx.lineTo(R*0.98,R*1.46); ctx.lineTo(R*1.46,R*0.98); ctx.closePath(); ctx.fill();
+  } else if(e.type==='soldier'){
+    ctx.fillStyle=dk; ctx.fillRect(-R-1,-R-1,(R+1)*2,(R+1)*2);
+    ctx.fillStyle=col; ctx.fillRect(-R*0.8,-R*0.8,R*1.6,R*1.6);
+    ctx.fillStyle='rgba(255,255,255,.22)'; ctx.fillRect(-R*0.8,-R*0.8,R*1.6,R*0.5);
+    ctx.fillStyle='#e6dfc8'; ctx.fillRect(R*0.45,-R,3.5,R*2);
+    ctx.fillStyle='rgba(0,0,0,.35)'; ctx.fillRect(-R*0.22,-R*0.22,R*0.44,R*0.44);
+  } else if(e.type==='guardian'){
+    ctx.fillStyle='rgba(255,220,130,.28)'; ctx.beginPath(); ctx.arc(0,0,R*1.7,0,7); ctx.fill();
+    ctx.fillStyle='#caa23e'; ctx.beginPath();
+    for(let i=0;i<12;i++){ const a=i/12*6.283+e.anim*0.4; const rr=i%2?R*1.5:R*0.95; ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr); }
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle=dk; ctx.beginPath(); ctx.arc(0,0,R*0.95,0,7); ctx.fill();
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(0,0,R*0.82,0,7); ctx.fill();
+    ctx.fillStyle='#fff3cf'; ctx.beginPath(); ctx.arc(0,0,R*0.4,0,7); ctx.fill();
+  } else { unitBead(col,dk,R); }
+  ctx.restore();
+  // hp bar when damaged or selected
+  if(e.hp<e.maxhp || S.sel.includes(e.id)) hpBar(e, e.x-e.r, e.y-e.r-7, e.r*2);
+}
+
+function hpBar(e,x,y,w){
+  const f=clamp(e.hp/e.maxhp,0,1); const h=5, r=2.5;
+  roundRectPath(ctx,x-1,y-1,w+2,h+2,r+1); ctx.fillStyle='rgba(0,0,0,.6)'; ctx.fill();
+  const good = e.owner==='enemy'?'#a78bff':'#7cc77a';
+  const col = f>0.4?good:(f>0.18?'#e0a23a':'#d8554f');
+  if(f>0){ const fw=Math.max(2,w*f);
+    roundRectPath(ctx,x,y,fw,h,r); ctx.fillStyle=col; ctx.fill();
+    roundRectPath(ctx,x,y,fw,h*0.5,r); ctx.fillStyle='rgba(255,255,255,.28)'; ctx.fill(); }
+}
+function progArc(x,y,f,color){
+  ctx.strokeStyle='rgba(0,0,0,.55)'; ctx.lineWidth=4.5; ctx.beginPath(); ctx.arc(x,y,14,0,7); ctx.stroke();
+  ctx.strokeStyle=color; ctx.lineWidth=4; ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(x,y,14,-Math.PI/2,-Math.PI/2+f*Math.PI*2); ctx.stroke(); ctx.lineCap='butt';
+}
+function drawSelect(e){
+  const c = e.owner==='player'?'#ffe49a':e.owner==='enemy'?'#c3acff':'#fff';
+  if(e.kind==='unit'){
+    const t=S.time*2.2, R=e.r*1.35;
+    ctx.save(); ctx.translate(e.x,e.y+e.r*0.55); ctx.scale(1,0.52);
+    ctx.strokeStyle=c; ctx.lineWidth=1.6; ctx.globalAlpha=0.9;
+    ctx.beginPath(); ctx.arc(0,0,R,0,7); ctx.stroke();
+    ctx.globalAlpha=0.8;
+    for(let i=0;i<8;i++){ const a=t+i/8*6.283; ctx.beginPath();
+      ctx.moveTo(Math.cos(a)*R,Math.sin(a)*R); ctx.lineTo(Math.cos(a)*(R+3.5),Math.sin(a)*(R+3.5)); ctx.stroke(); }
+    ctx.globalAlpha=1; ctx.restore();
+  } else {
+    const r=footprintRect(e); ctx.strokeStyle=c; ctx.lineWidth=2.4; const L=9;
+    const corners=[[r.x-2,r.y-2,1,1],[r.x+r.w+2,r.y-2,-1,1],[r.x-2,r.y+r.h+2,1,-1],[r.x+r.w+2,r.y+r.h+2,-1,-1]];
+    ctx.beginPath();
+    for(const cc of corners){ ctx.moveTo(cc[0],cc[1]); ctx.lineTo(cc[0]+cc[2]*L,cc[1]); ctx.moveTo(cc[0],cc[1]); ctx.lineTo(cc[0],cc[1]+cc[3]*L); }
+    ctx.stroke();
+  }
+}
+function drawGhost(){
+  const p=S.place, def=DEF[p.type]; const m=screenToWorld(p.mx,p.my);
+  let tx=clamp(toTile(m.x-(def.fp*TILE)/2)+ (def.fp>1?0:0),0,MAP_W-def.fp);
+  let ty=clamp(toTile(m.y-(def.fp*TILE)/2),0,MAP_H-def.fp);
+  tx=clamp(toTile(m.x)-((def.fp-1)>>1),0,MAP_W-def.fp);
+  ty=clamp(toTile(m.y)-((def.fp-1)>>1),0,MAP_H-def.fp);
+  p.tx=tx; p.ty=ty;
+  const ok=placeValid(tx,ty,def.fp); p.ok=ok;
+  ctx.globalAlpha=0.6; ctx.fillStyle=ok?'rgba(120,220,140,.5)':'rgba(216,85,79,.5)';
+  ctx.fillRect(tx*TILE,ty*TILE,def.fp*TILE,def.fp*TILE);
+  ctx.globalAlpha=1; ctx.strokeStyle=ok?'#7cc77a':'#d8554f'; ctx.lineWidth=2;
+  ctx.strokeRect(tx*TILE+1,ty*TILE+1,def.fp*TILE-2,def.fp*TILE-2);
+}
+function placeValid(tx,ty,fp){
+  for(let y=ty;y<ty+fp;y++)for(let x=tx;x<tx+fp;x++){
+    const t=at(x,y); if(!t)return false;
+    if(t.type==='water'||t.type==='forest'||t.type==='gold'||t.type==='berry'||t.type==='stone')return false;
+    if(S.occ&&S.occ[y*MAP_W+x])return false;
+    if(!isExplored(x,y))return false;
+  } return true;
+}
+function drawFog(x0,y0,x1,y1){
+  for(let ty=y0;ty<=y1;ty++)for(let tx=x0;tx<=x1;tx++){
+    if(!isExplored(tx,ty)){ ctx.fillStyle='#08060c'; ctx.fillRect(tx*TILE,ty*TILE,TILE,TILE); }
+    else if(!isVisible(tx,ty)){ ctx.fillStyle='rgba(8,6,12,.45)'; ctx.fillRect(tx*TILE,ty*TILE,TILE,TILE); }
+  }
+}
+function drawFX(){
+  for(const f of S.fx){ const k=f.life/f.max, e=1-k;
+    if(f.t==='ping'){ ctx.strokeStyle=f.color; ctx.lineWidth=2.2;
+      ctx.globalAlpha=k; ctx.beginPath(); ctx.arc(f.x,f.y,e*16+4,0,7); ctx.stroke();
+      ctx.globalAlpha=k*0.6; ctx.beginPath(); ctx.arc(f.x,f.y,e*9+3,0,7); ctx.stroke(); ctx.globalAlpha=1; }
+    else if(f.t==='hit'){ ctx.save(); ctx.globalAlpha=k; ctx.fillStyle='#ffe6b4';
+      ctx.beginPath(); ctx.arc(f.x,f.y,5*k+1.5,0,7); ctx.fill();
+      ctx.strokeStyle='rgba(255,220,150,'+k+')'; ctx.lineWidth=1.4;
+      for(let i=0;i<4;i++){ const a=i/4*6.283+0.4; const rr=6+e*7; ctx.beginPath();
+        ctx.moveTo(f.x+Math.cos(a)*3,f.y+Math.sin(a)*3); ctx.lineTo(f.x+Math.cos(a)*rr,f.y+Math.sin(a)*rr); ctx.stroke(); }
+      ctx.restore(); }
+    else if(f.t==='arrow'){ const hx=f.x+(f.tx-f.x)*0.55, hy=f.y+(f.ty-f.y)*0.55;
+      const ang=Math.atan2(f.ty-f.y,f.tx-f.x);
+      ctx.strokeStyle='#f3ead0'; ctx.globalAlpha=0.95; ctx.lineWidth=1.8; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(hx,hy); ctx.lineTo(hx-Math.cos(ang)*9,hy-Math.sin(ang)*9); ctx.stroke();
+      ctx.strokeStyle='rgba(220,170,90,.8)'; ctx.lineWidth=1.4;
+      ctx.beginPath(); ctx.moveTo(hx-Math.cos(ang)*9,hy-Math.sin(ang)*9);
+      ctx.lineTo(hx-Math.cos(ang)*13+Math.cos(ang+1.6)*3, hy-Math.sin(ang)*13+Math.sin(ang+1.6)*3); ctx.stroke();
+      ctx.lineCap='butt'; ctx.globalAlpha=1; }
+    else if(f.t==='death'){ ctx.globalAlpha=k*0.85; const r=e*(f.big?34:15)+4;
+      ctx.fillStyle=f.color; ctx.beginPath(); ctx.arc(f.x,f.y,r,0,7); ctx.fill();
+      ctx.fillStyle='rgba(40,30,20,'+(k*0.5)+')'; ctx.beginPath(); ctx.arc(f.x,f.y-e*6,r*0.7,0,7); ctx.fill();
+      ctx.globalAlpha=1; }
+    else if(f.t==='solar'){
+      ctx.fillStyle='rgba(255,225,150,'+(k*0.5)+')'; ctx.beginPath(); ctx.arc(f.x,f.y,f.r,0,7); ctx.fill();
+      ctx.strokeStyle='rgba(255,210,90,'+k+')'; ctx.lineWidth=5; ctx.beginPath(); ctx.arc(f.x,f.y,f.r*e+8,0,7); ctx.stroke();
+      ctx.strokeStyle='rgba(255,255,220,'+k+')'; ctx.lineWidth=2;
+      for(let i=0;i<10;i++){ const a=i/10*6.283+S.time; ctx.beginPath(); ctx.moveTo(f.x,f.y);
+        ctx.lineTo(f.x+Math.cos(a)*f.r,f.y+Math.sin(a)*f.r); ctx.stroke(); }
+      ctx.fillStyle='rgba(255,255,235,'+(k*0.9)+')'; ctx.beginPath(); ctx.arc(f.x,f.y,f.r*0.18*k+2,0,7); ctx.fill(); }
+  }
+}
+
+// minimap
+function drawMinimap(){
+  const W=mm.width,H=mm.height; const sx=W/MAP_W, sy=H/MAP_H;
+  mmx.fillStyle='#08060c'; mmx.fillRect(0,0,W,H);
+  for(let ty=0;ty<MAP_H;ty++)for(let tx=0;tx<MAP_W;tx++){
+    if(!isExplored(tx,ty))continue;
+    const t=at(tx,ty); let c=COLORS.grass;
+    if(t.type==='water')c=COLORS.water; else if(t.type==='forest')c='#2c4a32';
+    else if(t.type==='gold')c=COLORS.goldRock; else if(t.type==='berry')c='#7c2f44'; else if(t.type==='stone')c='#8b8597';
+    mmx.fillStyle=c; mmx.fillRect(tx*sx,ty*sy,Math.ceil(sx),Math.ceil(sy));
+    if(!isVisible(tx,ty)){ mmx.fillStyle='rgba(8,6,12,.4)'; mmx.fillRect(tx*sx,ty*sy,Math.ceil(sx),Math.ceil(sy)); }
+  }
+  for(const e of S.entities){ const tx=toTile(e.x),ty=toTile(e.y);
+    if(e.owner==='enemy'&&!isVisible(tx,ty))continue; if(!isExplored(tx,ty))continue;
+    mmx.fillStyle=ownerColor(e); const s=e.kind==='building'?3:2;
+    mmx.fillRect(e.x/WORLD_W*W-s/2, e.y/WORLD_H*H-s/2, s,s); }
+  // viewport
+  const vx=S.cam.x/WORLD_W*W, vy=S.cam.y/WORLD_H*H;
+  const vw=(VIEW_W/S.cam.z)/WORLD_W*W, vh=(VIEW_H/S.cam.z)/WORLD_H*H;
+  mmx.strokeStyle='rgba(255,214,110,.9)'; mmx.lineWidth=1.5; mmx.strokeRect(vx,vy,vw,vh);
+  // under-attack blink
+  if(S.lastAtk && S.time-S.lastAtk.t<4 && (((S.time*4)|0)&1)){
+    mmx.fillStyle='#ff4d4d'; const bx=S.lastAtk.x/WORLD_W*W, by=S.lastAtk.y/WORLD_H*H;
+    mmx.beginPath(); mmx.arc(bx,by,4,0,7); mmx.fill(); }
+}
+
+// ============================ CAMERA / INPUT =============================
+function resize(){
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  VIEW_W=window.innerWidth; VIEW_H=window.innerHeight;
+  cv.width=VIEW_W*DPR; cv.height=VIEW_H*DPR; cv.style.width=VIEW_W+'px'; cv.style.height=VIEW_H+'px';
+  if(S)clampCam();
+}
+function clampCam(){
+  const c=S.cam; c.z=clamp(c.z,Math.max(VIEW_W/WORLD_W,VIEW_H/WORLD_H,0.4),2.2);
+  c.x=clamp(c.x,0,Math.max(0,WORLD_W-VIEW_W/c.z));
+  c.y=clamp(c.y,0,Math.max(0,WORLD_H-VIEW_H/c.z));
+}
+function screenToWorld(sx,sy){ return {x:S.cam.x+sx/S.cam.z, y:S.cam.y+sy/S.cam.z}; }
+function worldToScreen(wx,wy){ return {x:(wx-S.cam.x)*S.cam.z, y:(wy-S.cam.y)*S.cam.z}; }
+
+function entAtScreen(sx,sy){
+  const w=screenToWorld(sx,sy); let best=null,bd=1e9;
+  for(const e of S.entities){ const tx=toTile(e.x),ty=toTile(e.y);
+    if(e.owner==='enemy'&&e.kind==='unit'&&!isVisible(tx,ty))continue;
+    if(!isExplored(toTile(e.x),toTile(e.y)) && e.kind==='unit')continue;
+    const dd=distToEnt(w.x,w.y,e); const hitR=e.kind==='unit'?e.r+6:0;
+    if(e.kind==='unit'){ if(dd<=hitR&&dd<bd){bd=dd;best=e;} }
+    else { const r=footprintRect(e); if(w.x>=r.x&&w.x<=r.x+r.w&&w.y>=r.y&&w.y<=r.y+r.h){ if(0<bd){bd=0;best=e;} } }
+  }
+  return best;
+}
+
+// pointer state
+const P={ down:false, id:null, sx:0,sy:0, lastx:0,lasty:0, moved:false, t0:0,
+          pinch:false, d0:0, z0:1, midx:0,midy:0, dragMode:null };
+function localXY(ev){ const r=cv.getBoundingClientRect(); return {x:ev.clientX-r.left,y:ev.clientY-r.top}; }
+
+cv.addEventListener('pointerdown',ev=>{
+  if(!S||S.over)return; cv.setPointerCapture(ev.pointerId);
+  const {x,y}=localXY(ev);
+  // placement mode: place on tap
+  if(S.place){ tryPlace(); return; }
+  P.down=true; P.id=ev.pointerId; P.sx=x;P.sy=y;P.lastx=x;P.lasty=y;P.moved=false;P.t0=performance.now();
+  P.dragMode = ev.pointerType==='mouse' ? 'box' : 'pan'; // mouse drags box-select; touch drags pan
+  P._cam={x:S.cam.x,y:S.cam.y};
+},{passive:false});
+
+cv.addEventListener('pointermove',ev=>{
+  if(!S)return; const {x,y}=localXY(ev);
+  if(S.place){ S.place.mx=x;S.place.my=y; return; }
+  if(!P.down)return;
+  const dx=x-P.sx, dy=y-P.sy;
+  if(Math.abs(dx)+Math.abs(dy)>6)P.moved=true;
+  if(P.dragMode==='pan'){ S.cam.x=P._cam.x-(x-P.sx)/S.cam.z; S.cam.y=P._cam.y-(y-P.sy)/S.cam.z; clampCam(); }
+  else if(P.dragMode==='box'){ S.box={x0:P.sx,y0:P.sy,x1:x,y1:y}; }
+  P.lastx=x;P.lasty=y;
+},{passive:false});
+
+cv.addEventListener('pointerup',ev=>{
+  if(!S)return; const {x,y}=localXY(ev);
+  if(S.place){ return; }
+  if(!P.down){return;} P.down=false;
+  const quick = !P.moved;
+  if(P.dragMode==='box' && P.moved && S.box){ boxSelect(S.box); S.box=null; return; }
+  S.box=null;
+  if(quick){ handleTap(x,y, performance.now()-P.t0); }
+},{passive:false});
+cv.addEventListener('pointercancel',()=>{P.down=false;S.box=null;});
+
+// touch pinch zoom + two-finger handled via touch events
+let touches={};
+cv.addEventListener('touchstart',ev=>{
+  if(!S)return;
+  for(const t of ev.changedTouches) touches[t.identifier]=localTouch(t);
+  const ks=Object.keys(touches);
+  if(ks.length===2){ P.pinch=true; P.down=false; S.box=null;
+    const a=touches[ks[0]],b=touches[ks[1]]; P.d0=dist(a.x,a.y,b.x,b.y)||1; P.z0=S.cam.z;
+    P.midx=(a.x+b.x)/2; P.midy=(a.y+b.y)/2; const w=screenToWorld(P.midx,P.midy); P.anchor=w; }
+},{passive:false});
+cv.addEventListener('touchmove',ev=>{
+  if(!S)return; ev.preventDefault();
+  for(const t of ev.changedTouches) if(touches[t.identifier]) touches[t.identifier]=localTouch(t);
+  const ks=Object.keys(touches);
+  if(P.pinch && ks.length>=2){ const a=touches[ks[0]],b=touches[ks[1]];
+    const d=dist(a.x,a.y,b.x,b.y)||1; S.cam.z=clamp(P.z0*(d/P.d0),0.4,2.2);
+    // keep anchor under fingers
+    const mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    S.cam.x=P.anchor.x-mid.x/S.cam.z; S.cam.y=P.anchor.y-mid.y/S.cam.z; clampCam(); }
+},{passive:false});
+cv.addEventListener('touchend',ev=>{
+  for(const t of ev.changedTouches) delete touches[t.identifier];
+  if(Object.keys(touches).length<2){ P.pinch=false; }
+},{passive:false});
+function localTouch(t){ const r=cv.getBoundingClientRect(); return {x:t.clientX-r.left,y:t.clientY-r.top}; }
+
+// wheel zoom (desktop)
+cv.addEventListener('wheel',ev=>{
+  if(!S)return; ev.preventDefault();
+  const before=screenToWorld(ev.clientX,ev.clientY);
+  S.cam.z=clamp(S.cam.z*(ev.deltaY<0?1.12:0.9),0.4,2.2);
+  const after=screenToWorld(ev.clientX,ev.clientY);
+  S.cam.x+=before.x-after.x; S.cam.y+=before.y-after.y; clampCam();
+},{passive:false});
+
+function handleTap(sx,sy){
+  const tgt=entAtScreen(sx,sy);
+  if(tgt){
+    if(tgt.owner==='player'){ selectEntity(tgt); }
+    else { // enemy/neutral -> if we have units, attack
+      const haveUnits=S.sel.some(id=>{const e=ent(id);return e&&e.owner==='player'&&e.kind==='unit';});
+      if(haveUnits && tgt.owner==='enemy'){ orderToEnemy(tgt); }
+      else if(tgt.type==='sacred'){ toast('Templo Sagrado: mantené unidades cerca para ganar Favor.'); }
+      else { S.sel=[]; refreshPanel(); }
+    }
+  } else {
+    // ground: order if we have units, else clear
+    const haveUnits=S.sel.some(id=>{const e=ent(id);return e&&e.owner==='player'&&e.kind==='unit';});
+    const haveBldg=S.sel.length===1 && (()=>{const e=ent(S.sel[0]);return e&&e.owner==='player'&&e.kind==='building';})();
+    const w=screenToWorld(sx,sy);
+    if(haveUnits){ orderToGround(w.x,w.y); }
+    else if(haveBldg){ const e=ent(S.sel[0]); if(e.def.trains||e.def.dropoff){ e.rally={x:w.x,y:w.y}; toast('Punto de reunión fijado.'); } }
+    else { S.sel=[]; refreshPanel(); }
+  }
+}
+function selectEntity(e){ S.sel=[e.id]; sfx('select'); refreshPanel(); }
+function boxSelect(box){
+  const a=screenToWorld(box.x0,box.y0), b=screenToWorld(box.x1,box.y1);
+  const rx=Math.min(a.x,b.x),ry=Math.min(a.y,b.y),rw=Math.abs(a.x-b.x),rh=Math.abs(a.y-b.y);
+  const sel=[];
+  for(const e of S.entities){ if(e.owner!=='player'||e.kind!=='unit')continue;
+    if(e.x>=rx&&e.x<=rx+rw&&e.y>=ry&&e.y<=ry+rh) sel.push(e.id); }
+  // prefer military if mix present and box big? just take all units; if any military, drop villagers
+  const hasMil=sel.some(id=>ent(id).def.mil);
+  S.sel = hasMil ? sel.filter(id=>ent(id).def.mil) : sel;
+  if(S.sel.length===0){ const one=entAtScreen(box.x1,box.y1); if(one&&one.owner==='player')S.sel=[one.id]; }
+  if(S.sel.length)sfx('select');
+  refreshPanel();
+}
+
+// keyboard camera + hotkeys
+const keys={};
+window.addEventListener('keydown',e=>{ keys[e.key.toLowerCase()]=true;
+  if(e.key==='Escape'){ if(S&&S.place){S.place=null;refreshPanel();} else if(S){S.sel=[];refreshPanel();} return; }
+  if(!S||S.over)return;
+  if(e.key>='1'&&e.key<='9'){
+    if(e.ctrlKey||e.metaKey){ assignGroup(e.key); e.preventDefault(); }
+    else { recallGroup(e.key); }
+    return;
+  }
+  if(e.key===' '||e.code==='Space'){ if(S.lastAtk){
+      S.cam.x=S.lastAtk.x-VIEW_W/S.cam.z/2; S.cam.y=S.lastAtk.y-VIEW_H/S.cam.z/2; clampCam(); }
+    e.preventDefault(); }
+});
+window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+function camKeys(dt){ if(!S)return; const sp=520*dt/S.cam.z; let m=false;
+  if(keys['w']||keys['arrowup']){S.cam.y-=sp;m=true;} if(keys['s']||keys['arrowdown']){S.cam.y+=sp;m=true;}
+  if(keys['a']||keys['arrowleft']){S.cam.x-=sp;m=true;} if(keys['d']||keys['arrowright']){S.cam.x+=sp;m=true;}
+  if(m)clampCam();
+}
+
+// minimap click -> recenter
+function mmTo(ev){ const r=mm.getBoundingClientRect();
+  const x=(ev.clientX-r.left)/r.width, y=(ev.clientY-r.top)/r.height;
+  S.cam.x=x*WORLD_W - (VIEW_W/S.cam.z)/2; S.cam.y=y*WORLD_H-(VIEW_H/S.cam.z)/2; clampCam(); }
+mm.addEventListener('pointerdown',ev=>{ev.stopPropagation(); mmTo(ev); mm._drag=true;});
+mm.addEventListener('pointermove',ev=>{ if(mm._drag)mmTo(ev); });
+window.addEventListener('pointerup',()=>{ mm._drag=false; });
+
+// ======================== UI PANEL =======================================
+function refreshPanel(){
+  const head=document.getElementById('cmd-head');
+  const title=document.getElementById('cmd-title');
+  const sub=document.getElementById('cmd-sub');
+  const grid=document.getElementById('cmd-grid');
+  grid.innerHTML='';
+  if(S.place){ title.textContent='Colocar '+DEF[S.place.type].name;
+    sub.textContent='Tocá un lugar válido · Esc para cancelar'; 
+    const c=mkBtn('Cancelar','',true,()=>{ refundPlace(); S.place=null; refreshPanel(); }); grid.appendChild(c);
+    return; }
+  if(S.sel.length===0){ title.textContent='Dominion Realms';
+    sub.textContent='Tocá una unidad o edificio'; return; }
+  if(S.sel.length>1){
+    const counts={}; let mil=0;
+    for(const id of S.sel){ const e=ent(id); if(!e)continue;
+      counts[e.def.name]=(counts[e.def.name]||0)+1; if(e.def.mil)mil++; }
+    title.textContent=S.sel.length+' seleccionados';
+    sub.textContent=Object.keys(counts).map(n=>counts[n]+'× '+n).join(' · ');
+    addStopCard(grid);
+    addCard(grid,{name:'⊕ Grupo',plain:true,onClick:saveSelToGroup});
+    if(mil) addStanceRow(grid);
+    return;
+  }
+  const e=ent(S.sel[0]); if(!e){S.sel=[];return refreshPanel();}
+  title.textContent=e.def.name;
+  if(e.kind==='unit'){
+    sub.textContent= e.def.gather?'Aldeano · construye y recolecta':
+      (e.def.myth?'Unidad mítica':'HP '+Math.ceil(e.hp)+'/'+e.maxhp);
+    if(e.def.build){ // build menu
+      const blds=['house','farm','barracks','archery','blacksmith','tower','temple'];
+      for(const b of blds){ const def=DEF[b]; const locked=def.era&&era('player')<def.era;
+        addCard(grid,{ name:def.name, cost:def.cost, locked, can:canAfford('player',def.cost),
+          onClick:()=>startPlacement(b) }); }
+      addStopCard(grid);
+    } else { addStopCard(grid); 
+      if(e.def.mil){ addStanceRow(grid); } }
+  } else {
+    // building
+    if(e.owner!=='player'){ sub.textContent='Enemigo · HP '+Math.ceil(e.hp)+'/'+e.maxhp; return; }
+    sub.textContent='HP '+Math.ceil(e.hp)+'/'+e.maxhp + (e.rally?' · reunión fijada':'');
+    if(!e.built){ sub.textContent='En construcción '+Math.floor(e.prog*100)+'%'; return; }
+    if(e.def.ageup){ // town center
+      for(const u of e.def.trains){ addTrainCard(grid,e,u); }
+      if(era('player')<2){ const can=canAfford('player',AGEUP_COST)&&e.queue.length===0&&e.ageTimer===0;
+        addCard(grid,{ name:'⬆ Era de los Templos', cost:AGEUP_COST, can, busy:e.ageTimer>0,
+          onClick:()=>doAgeUp(e) }); }
+    } else if(e.def.trains){ for(const u of e.def.trains){ addTrainCard(grid,e,u); } }
+    else if(e.def.research){ sub.textContent='Herrería · mejoras permanentes';
+      for(const key of UPG_KEYS){ const def=UPG[key]; const lvl=S.upg.player[key]; const maxed=lvl>=def.max;
+        const cost=maxed?null:def.cost(lvl);
+        addCard(grid,{ name:def.icon+' '+def.name+' '+(maxed?'MAX':'('+lvl+'/'+def.max+')'),
+          cost:cost, can: maxed?undefined:canAfford('player',cost),
+          onClick:()=>doResearch('player',key) }); } }
+    else if(e.type==='farm'){ sub.textContent='Granja · comida restante: '+Math.ceil(srcLeft(e)); }
+    if(e.def.trains||e.def.dropoff){ addCard(grid,{name:'Punto de reunión',plain:true,onClick:()=>toast('Tocá el suelo para fijar la reunión.')}); }
+  }
+}
+function srcLeft(e){ return e._food!=null?e._food:DEF.farm.foodSrc; }
+function addCard(grid,o){
+  const c=document.createElement('div'); c.className='card'+(o.locked?' locked':'')+((!o.locked&&o.can===false)?' cant':'');
+  let html=`<div class="name">${o.name}</div>`;
+  if(o.cost){ html+=`<div class="cost">${costStr(o.cost)}</div>`; }
+  else if(o.plain){ c.style.minHeight='auto'; }
+  if(o.busy)html+=`<div class="cost">…en progreso</div>`;
+  c.innerHTML=html;
+  c.addEventListener('click',()=>{ if(o.locked){toast('Necesitás la Era de los Templos.');return;}
+    if(o.can===false){toast('Recursos insuficientes.');return;} if(o.busy)return; o.onClick(); });
+  grid.appendChild(c); return c;
+}
+function addTrainCard(grid,b,u){
+  const def=DEF[u]; const locked=def.era&&era('player')<def.era;
+  const can=canAfford('player',def.cost)&&popUsed('player')<popCap('player');
+  const qc=b.queue.filter(q=>q===u).length;
+  const c=addCard(grid,{ name:def.name, cost:def.cost, locked, can, busy:b.ageTimer>0,
+    onClick:()=>queueTrain(b,u) });
+  if(qc){ const q=document.createElement('div'); q.className='q'; q.textContent='×'+qc; c.appendChild(q); }
+  if(b.queue[0]===u){ const bar=document.createElement('div'); bar.className='bar';
+    bar.style.width=(100*(1-b.qTimer/def.train))+'%'; c.appendChild(bar); }
+}
+function addStopCard(grid){ addCard(grid,{name:'⛔ Detener',plain:true,onClick:()=>{
+  for(const id of S.sel){const e=ent(id); if(e&&e.kind==='unit'){e.target=null;e.goal=null;e.path=null;e.state='idle';e.attackMove=false;}} }}); }
+function mkBtn(name,cost,plain,fn){ const c=document.createElement('div'); c.className='card'; c.style.minHeight='auto';
+  c.innerHTML=`<div class="name">${name}</div>`; c.addEventListener('click',fn); return c; }
+function costStr(cost){ const map={food:'🍖',wood:'🪵',gold:'🟡',stone:'🪨',favor:'🔷'};
+  return Object.keys(cost).map(k=>`${map[k]||k}${cost[k]}`).join(' '); }
+
+function queueTrain(b,u){
+  const def=DEF[u];
+  if(def.era&&era('player')<def.era){toast('Requiere Era de los Templos.');return;}
+  if(b.ageTimer>0){toast('El Centro está avanzando de era.');return;}
+  if(popUsed('player')+def.pop>popCap('player')){toast('Población llena. Construí una Casa.');return;}
+  if(!canAfford('player',def.cost)){toast('Recursos insuficientes.');return;}
+  pay('player',def.cost); b.queue.push(u); if(b.queue.length===1)b.qTimer=def.train; refreshPanel();
+}
+function doAgeUp(e){
+  if(!canAfford('player',AGEUP_COST)){toast('Necesitás 200 comida y 100 oro.');return;}
+  if(e.queue.length){toast('Vaciá la cola del Centro primero.');return;}
+  pay('player',AGEUP_COST); e.ageTimer=AGEUP_TIME; toast('Avanzando a la Era de los Templos…'); refreshPanel();
+}
+function doResearch(owner,key){
+  const def=UPG[key], lvl=S.upg[owner][key];
+  if(lvl>=def.max){ if(owner==='player')toast('Mejora al máximo.'); return false; }
+  const cost=def.cost(lvl);
+  if(!canAfford(owner,cost)){ if(owner==='player')toast('Recursos insuficientes.'); return false; }
+  pay(owner,cost); S.upg[owner][key]++;
+  if(owner==='player'){ toast(def.name+' nivel '+S.upg[owner][key]); sfx('done'); refreshPanel(); }
+  return true;
+}
+function startPlacement(type){
+  const def=DEF[type];
+  if(def.era&&era('player')<def.era){toast('Requiere Era de los Templos.');return;}
+  if(!canAfford('player',def.cost)){toast('Recursos insuficientes.');return;}
+  // builders = selected villagers
+  const builders=S.sel.map(ent).filter(e=>e&&e.type==='villager');
+  if(builders.length===0){toast('Seleccioná un aldeano para construir.');return;}
+  S.place={type, mx:VIEW_W/2, my:VIEW_H/2, builders:builders.map(b=>b.id), paid:false};
+  refreshPanel();
+}
+function tryPlace(){
+  const p=S.place; if(!p)return; const def=DEF[p.type];
+  if(!p.ok){toast('No se puede construir ahí.');return;}
+  if(!canAfford('player',def.cost)){toast('Recursos insuficientes.');S.place=null;refreshPanel();return;}
+  pay('player',def.cost);
+  const builders=p.builders.map(ent).filter(Boolean);
+  placeBuildingFoundation(p.type,'player',p.tx,p.ty,builders);
+  S.place=null; refreshPanel();
+}
+function refundPlace(){ /* nothing paid until placed */ }
+
+// resource bar (every frame)
+function updateTopbar(){
+  if(!S)return; const r=res('player');
+  document.getElementById('r-food').textContent=Math.floor(r.food);
+  document.getElementById('r-wood').textContent=Math.floor(r.wood);
+  document.getElementById('r-gold').textContent=Math.floor(r.gold);
+  document.getElementById('r-stone').textContent=Math.floor(r.stone||0);
+  document.getElementById('r-favor').textContent=Math.floor(r.favor);
+  document.getElementById('r-pop').textContent=popUsed('player')+'/'+popCap('player');
+}
+function updatePowerUI(){
+  const wrap=document.getElementById('power-wrap');
+  const hasTemple=S.entities.some(e=>e.owner==='player'&&e.type==='temple'&&e.built&&!e.dead);
+  if(hasTemple){ wrap.classList.remove('hide'); } else { wrap.classList.add('hide'); return; }
+  const btn=document.getElementById('powerbtn');
+  const ready=S.power.cd<=0 && res('player').favor>=POWER.cost;
+  btn.disabled=!ready && !S.power.aiming;
+  btn.classList.toggle('armed',S.power.aiming);
+  btn.innerHTML = S.power.cd>0 ? Math.ceil(S.power.cd)+'s' : 'Rayo<br>Solar';
+}
+
+// power button
+document.getElementById('powerbtn').addEventListener('click',()=>{
+  if(!S)return;
+  if(S.power.aiming){ S.power.aiming=false; updatePowerUI(); return; }
+  if(S.power.cd>0){toast('Rayo Solar en enfriamiento.');return;}
+  if(res('player').favor<POWER.cost){toast('Necesitás '+POWER.cost+' de Favor.');return;}
+  S.power.aiming=true; updatePowerUI(); toast('Tocá el objetivo del Rayo Solar.');
+});
+// power targeting via canvas tap (intercept before normal handling)
+cv.addEventListener('pointerdown',ev=>{
+  if(!S||!S.power.aiming)return;
+  const {x,y}=localXY(ev); const w=screenToWorld(x,y);
+  castSolar(w.x,w.y); S.power.aiming=false; updatePowerUI();
+  ev.stopImmediatePropagation();
+},true);
+function castSolar(x,y){
+  if(res('player').favor<POWER.cost){return;}
+  res('player').favor-=POWER.cost; S.power.cd=POWER.cd;
+  fxSolar(x,y); sfx('power'); const R=POWER.radius*TILE;
+  for(const e of S.entities){ if(e.owner==='player'||e.owner==='neutral'||e.dead)continue;
+    const dd=distToEnt(x,y,e); if(dd<=R){ hurt(e, e.kind==='building'?POWER.dmgBuild:POWER.dmgUnit, 'player'); fxHit(e.x,e.y); } }
+  toast('¡Rayo Solar!');
+}
+
+// quick-select buttons
+document.getElementById('btn-army').addEventListener('click',()=>{ if(!S)return;
+  const a=S.entities.filter(e=>e.owner==='player'&&e.kind==='unit'&&e.def.mil&&!e.dead).map(e=>e.id);
+  if(a.length){ S.sel=a; refreshPanel(); centerOnSel(); } else toast('No tenés ejército todavía.'); });
+document.getElementById('btn-idle').addEventListener('click',()=>{ if(!S)return;
+  const v=S.entities.find(e=>e.owner==='player'&&e.type==='villager'&&!e.dead&&(e.state==='idle'||(!e.gatherType&&e.state!=='build'&&e.state!=='return')));
+  if(v){ S.sel=[v.id]; refreshPanel(); S.cam.x=v.x-VIEW_W/S.cam.z/2; S.cam.y=v.y-VIEW_H/S.cam.z/2; clampCam(); } else toast('No hay aldeanos libres.'); });
+function centerOnSel(){ if(!S.sel.length)return; let x=0,y=0,n=0; for(const id of S.sel){const e=ent(id);if(e){x+=e.x;y+=e.y;n++;}}
+  if(n){ S.cam.x=x/n-VIEW_W/S.cam.z/2; S.cam.y=y/n-VIEW_H/S.cam.z/2; clampCam(); } }
+
+// ---------- Control groups ----------
+let lastGroup=null, lastGroupTap=0;
+function assignGroup(g){ if(!S||!S.sel.length)return; S.groups[g]=S.sel.slice();
+  toast('Grupo '+g+' guardado ('+S.groups[g].length+')'); sfx('select'); updateGroupBar(); }
+function recallGroup(g){ if(!S)return; const ids=(S.groups[g]||[]).filter(id=>ent(id)&&!ent(id).dead);
+  if(!ids.length)return; S.sel=ids; refreshPanel(); sfx('select');
+  const now=performance.now(); if(now-lastGroupTap<350 && lastGroup===g) centerOnSel();
+  lastGroup=g; lastGroupTap=now; }
+function saveSelToGroup(){ if(!S||!S.sel.length)return;
+  for(let g=1;g<=9;g++){ if(!(S.groups[g]&&S.groups[g].length)){ assignGroup(''+g); return; } } assignGroup('1'); }
+function updateGroupBar(){ const bar=document.getElementById('groupbar'); if(!bar||!S)return; bar.innerHTML='';
+  for(let g=1;g<=9;g++){ const ids=(S.groups[g]||[]).filter(id=>ent(id)&&!ent(id).dead);
+    if(!ids.length)continue; const d=document.createElement('div'); d.className='grp';
+    d.innerHTML=g+' <small>'+ids.length+'</small>';
+    d.addEventListener('click',()=>recallGroup(''+g)); bar.appendChild(d); } }
+
+// ---------- Stances ----------
+function selectedMil(){ return S.sel.map(ent).filter(e=>e&&e.owner==='player'&&e.kind==='unit'&&e.def.mil&&!e.dead); }
+function setStance(st){ const ms=selectedMil();
+  for(const e of ms){ e.stance=st; e.guard={x:e.x,y:e.y};
+    if(st==='passive'||st==='hold'){ if(e.state==='attack'){ e.target=null; e.engaging=false; e.path=null; e.state='idle'; } } }
+  refreshPanel(); }
+function addStanceRow(grid){ const ms=selectedMil(); if(!ms.length)return;
+  const cur = ms.every(e=>e.stance===ms[0].stance)?ms[0].stance:null;
+  const row=document.createElement('div'); row.style.display='flex'; row.style.gap='5px';
+  row.style.flexBasis='100%'; row.style.marginTop='3px';
+  const defs=[['aggressive','Agresiva'],['defensive','Defensiva'],['hold','Mantener'],['passive','Pasiva']];
+  for(const [k,lbl] of defs){ const b=document.createElement('div'); b.className='stancebtn'+(cur===k?' on':'');
+    b.textContent=lbl; b.addEventListener('click',()=>{ setStance(k); }); row.appendChild(b); }
+  grid.appendChild(row); }
+
+// ---------- Temple-hold bar ----------
+function updateTempleBar(){ const el=document.getElementById('templebar'); if(!el||!S)return;
+  const ph=S.templeHold.player, eh=S.templeHold.enemy, lead=Math.max(ph,eh);
+  if(lead<0.5){ el.classList.add('hide'); return; } el.classList.remove('hide');
+  const who=ph>=eh?'player':'enemy', val=who==='player'?ph:eh;
+  const fill=document.getElementById('temple-fill');
+  fill.style.width=Math.min(100,val/TEMPLE_WIN*100)+'%';
+  fill.style.background=who==='player'?'linear-gradient(90deg,#7fd0ff,#cfeeff)':'linear-gradient(90deg,#a78bff,#d7c9ff)';
+  document.getElementById('temple-txt').textContent=(who==='player'?'Vos':'Enemigo')+' '+Math.ceil(val)+'/'+TEMPLE_WIN+'s'; }
+
+// double-tap (select same type on screen) - simple
+let lastTap=0,lastTapId=null;
+cv.addEventListener('pointerup',ev=>{
+  if(!S||S.place||S.over)return; const now=performance.now();
+  const {x,y}=localXY(ev); const e=entAtScreen(x,y);
+  if(e&&e.owner==='player'&&e.kind==='unit'){ if(now-lastTap<320&&lastTapId===e.type){
+      const sel=S.entities.filter(o=>o.owner==='player'&&o.type===e.type&&!o.dead&&onScreen(o)).map(o=>o.id);
+      S.sel=sel; refreshPanel(); }
+    lastTap=now; lastTapId=e.type; }
+});
+function onScreen(e){ const s=worldToScreen(e.x,e.y); return s.x>-40&&s.y>-40&&s.x<VIEW_W+40&&s.y<VIEW_H+40; }
+
+// ======================== SAVE / LOAD (in-memory) ========================
+document.getElementById('btn-save').addEventListener('click',()=>{ if(!S||S.over)return;
+  try{ saveSlot=snapshot(); document.getElementById('btn-load').disabled=false; toast('Partida guardada (en memoria).'); }
+  catch(err){ toast('No se pudo guardar.'); } });
+document.getElementById('btn-load').addEventListener('click',()=>{ if(!saveSlot)return;
+  restore(saveSlot); toast('Partida cargada.'); });
+function snapshot(){
+  // strip non-serializable / regenerate-able fields
+  const copy=JSON.parse(JSON.stringify({
+    map:S.map, entities:S.entities.map(stripEnt), res:S.res, pop:S.pop, era:S.era,
+    time:S.time, cam:S.cam, bot:S.bot, power:{cd:S.power.cd},
+    groups:S.groups, templeHold:S.templeHold, lastAtk:S.lastAtk||null, _alertT:S._alertT==null?null:S._alertT,
+    upg:S.upg,
+    fog:{exp:Array.from(S.fog.exp)}, _id
+  }));
+  return copy;
+}
+function stripEnt(e){ const c=Object.assign({},e); delete c.def; delete c.path; return c; }
+function restore(s){
+  S.map=s.map; S.res=s.res; S.pop=s.pop; S.era=s.era; S.time=s.time; S.cam=s.cam; S.bot=s.bot;
+  S.power={cd:s.power.cd,aiming:false}; _id=s._id;
+  S.groups=s.groups||{}; S.templeHold=s.templeHold||{player:0,enemy:0}; S.lastAtk=s.lastAtk||null; S._alertT=s._alertT;
+  S.upg=s.upg||{ player:{melAtk:0,ranAtk:0,armor:0,gather:0}, enemy:{melAtk:0,ranAtk:0,armor:0,gather:0} };
+  S.entities=s.entities.map(e=>{ e.def=DEF[e.type]; e.path=null; return e; });
+  S.fog={ vis:new Uint8Array(MAP_W*MAP_H), exp:Uint8Array.from(s.fog.exp) };
+  S.sel=[]; S.fx=[]; S.box=null; S.place=null; S.over=false; S.grid=null;
+  rebuildOccupancy(); refreshFog(true); buildTerrain(); updateGroupBar();
+  document.getElementById('eraname').textContent = era('player')>=2?'Era de los Templos':'Era del Alba';
+  updatePowerUI(); refreshPanel();
+}
+
+// ============================ NEW GAME ===================================
+function newGame(){
+  _id=1;
+  S={ map:makeMap(), entities:[], sel:[], fx:[], box:null, place:null,
+      res:{ player:{food:200,wood:200,gold:120,stone:75,favor:0}, enemy:{food:200,wood:200,gold:120,stone:75,favor:0} },
+      pop:{}, era:{player:1,enemy:1}, time:0, over:false, running:true,
+      cam:{x:0,y:0,z:1}, power:{cd:0,aiming:false},
+      groups:{}, templeHold:{player:0,enemy:0}, lastAtk:null, _alertT:null,
+      upg:{ player:{melAtk:0,ranAtk:0,armor:0,gather:0}, enemy:{melAtk:0,ranAtk:0,armor:0,gather:0} },
+      bot:{ t:0, plan:0, attacking:false, waveSize:DIFF[diffIdx].wave0, nextAttackAt:DIFF[diffIdx].firstAttack, buildingHouse:null } };
+  rebuildOccupancy();
+
+  // player base bottom-left, enemy top-right
+  const pbx=6, pby=MAP_H-8, ebx=MAP_W-9, eby=6;
+  clearArea(pbx,pby,5); clearArea(ebx,eby,5);
+  const pTC=spawn('towncenter','player', tileC(pbx)+TILE, tileC(pby)+TILE);
+  const eTC=spawn('towncenter','enemy', tileC(ebx)+TILE, tileC(eby)+TILE);
+  // starting villagers
+  for(let i=0;i<4;i++){ const v=spawn('villager','player', tileC(pbx+3)+rnd(-10,10), tileC(pby+3)+i*16-24);
+    const r=nearestRes(i<2?'berry':(i<3?'forest':'gold'),v.x,v.y); if(r)assignGather(v,r.tx,r.ty); }
+  for(let i=0;i<4;i++){ spawn('villager','enemy', tileC(ebx+1)+rnd(-10,10), tileC(eby+3)+i*16-24); }
+  // ensure resources near each base
+  ensureResNear(pbx+2,pby+2); ensureResNear(ebx+2,eby+2);
+
+  // central sacred temple
+  const cx=Math.floor(MAP_W/2)-1, cy=Math.floor(MAP_H/2)-1; clearArea(cx,cy,3);
+  spawn('sacred','neutral', tileC(cx)+TILE/2, tileC(cy)+TILE/2);
+
+  rebuildOccupancy();
+  // camera on player base
+  S.cam.z= Math.min(1.15, Math.max(VIEW_W/WORLD_W,VIEW_H/WORLD_H)+0.5);
+  S.cam.x=pTC.x-VIEW_W/S.cam.z/2; S.cam.y=pTC.y-VIEW_H/S.cam.z/2; clampCam();
+  refreshFog(true);
+  buildTerrain(); updateGroupBar();
+  document.getElementById('eraname').textContent='Era del Alba';
+  document.getElementById('power-wrap').classList.add('hide');
+  S.sel=[pTC.id]; refreshPanel();
+}
+function clearArea(tx,ty,r){ for(let y=ty-r;y<=ty+r;y++)for(let x=tx-r;x<=tx+r;x++){ const t=at(x,y);
+  if(t&&(t.type==='forest'||t.type==='gold'||t.type==='berry'||t.type==='stone'||t.type==='water')){ t.type='grass'; t.amount=0; } } }
+function ensureResNear(tx,ty){
+  // guarantee a wood, gold, berry patch within ~7 tiles
+  const want=[['forest',120],['gold',420],['berry',280],['stone',360],['forest',120]];
+  for(const [type,amt] of want){
+    if(nearestResWithin(type,tileC(tx),tileC(ty),9*TILE))continue;
+    for(let tries=0;tries<60;tries++){ const x=tx+ri(-7,7),y=ty+ri(-7,7); const t=at(x,y);
+      if(t&&t.type==='grass'&&!(S.occ&&S.occ[y*MAP_W+x])){ t.type=type; t.amount=amt; break; } }
+  }
+}
+function nearestResWithin(type,x,y,maxd){ const r=nearestRes(type,x,y); return r&&dist(x,y,tileC(r.tx),tileC(r.ty))<=maxd; }
+
+// ============================ MAIN LOOP ==================================
+function loop(t){
+  const dt=Math.min(0.05,(t-lastTime)/1000)||0; lastTime=t;
+  if(S&&S.running&&!S.over){ camKeys(dt); update(dt); }
+  if(S){ updateTopbar(); updatePowerUI(); updateTempleBar();
+    // periodic panel refresh for queue/affordability
+    S._uiT=(S._uiT||0)+dt; if(S._uiT>0.25){ S._uiT=0; if(S.sel.length&&!S.place)refreshPanel(); } }
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ============================ BOOT / MENU ================================
+function bindMenu(){
+  document.querySelectorAll('#diff .btn').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('#diff .btn').forEach(x=>x.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true'); diffIdx=+b.dataset.d; }));
+  document.getElementById('btn-start').addEventListener('click',()=>{
+    audioInit(); audioResume();
+    document.getElementById('start').classList.add('hide');
+    newGame(); });
+  document.getElementById('btn-again').addEventListener('click',()=>{
+    document.getElementById('end').classList.add('hide'); newGame(); });
+  document.getElementById('btn-mute').addEventListener('click',()=>{
+    muted=!muted; document.getElementById('btn-mute').textContent=muted?'🔇':'🔊';
+    if(!muted){ audioInit(); audioResume(); } });
+}
+// iOS/Safari require a gesture to start audio; resume on any pointer down
+window.addEventListener('pointerdown',()=>{ audioInit(); audioResume(); });
+
+window.addEventListener('resize',resize);
+resize(); bindMenu();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
